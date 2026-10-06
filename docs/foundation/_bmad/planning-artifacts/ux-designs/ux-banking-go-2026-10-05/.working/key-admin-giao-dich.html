@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Giao dịch</title>
+<style>
+/*
+  KEY SCREEN — Web admin · Giao dịch (lọc unknown) + chi tiết giao dịch (Drawer)
+  Spine sections governing this screen:
+    EXPERIENCE.md → Information Architecture / Web admin (sider theo vai GDV, mục R1)
+                  → Key Flows / KF-3 (GDV Chi xử lý giao dịch unknown, BF-5)
+                  → Component Patterns: Bảng admin (phân trang server, lọc trên URL, số tiền căn phải),
+                    Badge trạng thái (không gộp unknown vào pending), Timeline giao dịch
+                  → State Patterns: Giao dịch `unknown` / Admin (badge + thời gian đã chờ + "Tra soát lại")
+                  → Voice and Tone / Admin (trung tính, thuật ngữ glossary: tạm giữ, tra soát, ghi Nợ)
+                  → Accessibility Floor (aria-live cho đổi trạng thái, không chỉ dựa vào màu)
+                  → Responsive & Platform / Admin (desktop ≥ 1280px)
+    DESIGN.md     → Colors (status-*, money-in/out, dark *-dark), Typography (body, mono, amount, tabular-nums),
+                    Layout & Spacing (sider 232px, lề 24px), Elevation (phẳng; chỉ drawer có bóng),
+                    Shapes (4px; badge 2px), Components (Badge trạng thái, Số tiền, Nút chính ≤ 1/màn)
+  Patterns added beyond EXPERIENCE.md (flagged): see .note blocks marked "Bổ sung".
+  Browser chrome colours (#E3E7EE etc.) are presentation only, not product tokens.
+*/
+:root{
+  --primary:#1F3A68; --primary-hover:#2C4F8A; --on-primary:#FFFFFF;
+  --bg:#F3F5F9; --elev:#FFFFFF; --border:#D3DAE6; --text:#13203A; --text2:#4A5772;
+  --success:#1D7A4C; --warning:#8F5B00; --error:#B42318; --info:#1F5FAD;
+  --in:#1D7A4C; --out:#A0392A;
+  --pe-bg:#E9EFF7; --pe-fg:#1F5FAD; --pe-bd:#9AB7DA;
+  --su-bg:#E8F2ED; --su-fg:#1D7A4C; --su-bd:#99C3AE;
+  --fa-bg:#F8E9E8; --fa-fg:#B42318; --fa-bd:#DD9C97;
+  --un-bg:#F4EFE6; --un-fg:#8F5B00; --un-bd:#CDB58C;
+  --sel-bg:#E9EFF7;
+  --mask:rgba(19,32,58,.45);
+  --font:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, monospace;
+}
+.theme-dark{
+  --primary:#4170C0; --primary-hover:#3866B2; --on-primary:#FFFFFF;
+  --bg:#0C1424; --elev:#142038; --border:#283851; --text:#E6ECF5; --text2:#A4B0C6;
+  --success:#5FC290; --warning:#E5B045; --error:#F08A7E; --info:#7FB0EE;
+  --in:#5FC290; --out:#F0A08E;
+  --pe-bg:#253755; --pe-fg:#7FB0EE; --pe-bd:#44618A;
+  --su-bg:#203A46; --su-fg:#5FC290; --su-bd:#366960;
+  --fa-bg:#373143; --fa-fg:#F08A7E; --fa-bd:#775058;
+  --un-bg:#35373A; --un-fg:#E5B045; --un-bd:#72613E;
+  --sel-bg:#253755;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#DCE1EA;color:var(--text);font:400 14px/1.57 var(--font);padding:32px 0 64px}
+.mono{font-family:var(--mono);font-size:13px}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:14px;height:14px;flex:none;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg.i16{width:16px;height:16px}
+
+/* presentation scaffolding */
+.sec{width:1440px;margin:0 auto 16px}
+.sec h1{font-size:20px;font-weight:600;margin:0 0 4px;color:#13203A}
+.sec p{margin:0;color:#4A5772;font-size:13px}
+.note{width:1440px;margin:12px auto 40px;font-size:12px;color:#4A5772;border-left:3px solid #9AB7DA;padding:4px 12px;background:#FFFFFF}
+
+/* browser frame */
+.frame{width:1440px;margin:0 auto;border:1px solid #B9C2D2;border-radius:8px;overflow:hidden;background:var(--bg);box-shadow:0 8px 24px rgba(19,32,58,.12)}
+.chrome{height:44px;background:#E3E7EE;border-bottom:1px solid #C9D0DC;display:flex;align-items:center;gap:14px;padding:0 14px}
+.dots{display:flex;gap:7px}.dots i{width:12px;height:12px;border-radius:50%;background:#C3CAD6;display:block}
+.url{flex:1;height:28px;background:#FFFFFF;border:1px solid #C9D0DC;border-radius:14px;display:flex;align-items:center;gap:8px;padding:0 14px;font:12px/1 var(--mono);color:#4A5772;white-space:nowrap;overflow:hidden}
+.url b{color:#13203A;font-weight:500}
+.url .q{color:#1F3A68}
+
+/* AntD Layout */
+.app{display:flex;position:relative;height:880px;background:var(--bg)}
+.app.tall{height:1060px}
+.sider{width:232px;flex:none;background:var(--elev);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.logo{height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--border);font-weight:600;font-size:15px}
+.logo .mk{width:28px;height:28px;border-radius:4px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-size:13px;font-weight:700}
+.logo small{display:block;font-size:11px;font-weight:400;color:var(--text2);line-height:1.2}
+.menu{list-style:none;margin:8px 0;padding:0 8px}
+.menu li{height:40px;display:flex;align-items:center;gap:10px;padding:0 16px;border-radius:4px;color:var(--text);margin:4px 0}
+.menu li svg{width:16px;height:16px}
+.menu li.on{background:var(--sel-bg);color:var(--primary);font-weight:600;position:relative}
+.menu li.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--primary)}
+.menu .cnt{margin-left:auto;font-size:12px;font-weight:600;line-height:20px;min-width:20px;padding:0 6px;border-radius:2px;border:1px dashed var(--un-bd);background:var(--un-bg);color:var(--un-fg);text-align:center}
+.sider .foot{margin-top:auto;padding:12px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:56px;flex:none;background:var(--elev);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.crumb{color:var(--text2);display:flex;gap:8px;align-items:center}
+.crumb b{color:var(--text);font-weight:400}
+.tools{display:flex;align-items:center;gap:16px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:4px;padding:2px;background:var(--bg)}
+.seg span{padding:0 10px;line-height:24px;border-radius:2px;font-size:13px;color:var(--text2)}
+.seg span.on{background:var(--elev);color:var(--text);font-weight:600;box-shadow:0 0 0 1px var(--border)}
+.icon-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:50%;display:grid;place-items:center;color:var(--text2);background:var(--elev)}
+.user{display:flex;align-items:center;gap:8px}
+.ava{width:32px;height:32px;border-radius:50%;background:var(--sel-bg);color:var(--primary);display:grid;place-items:center;font-weight:600}
+.user small{color:var(--text2)}
+
+.content{padding:24px;flex:1;min-height:0}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.ph h2{font-size:20px;font-weight:600;line-height:1.35;margin:0}
+.ph p{margin:2px 0 0;color:var(--text2)}
+
+/* card + filter bar */
+.card{background:var(--elev);border:1px solid var(--border);border-radius:4px}
+.filters{display:flex;align-items:flex-end;gap:16px;padding:16px;margin-bottom:16px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.ctl{height:32px;border:1px solid var(--border);border-radius:4px;background:var(--elev);display:flex;align-items:center;gap:6px;padding:0 11px;color:var(--text)}
+.ctl.ph-text{color:var(--text2)}
+.ctl .chev{margin-left:auto;color:var(--text2)}
+.ctl.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(31,58,104,.12)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 6px;border-radius:2px;background:var(--bg);border:1px solid var(--border);font-size:12px}
+.chip svg{width:10px;height:10px}
+.link{color:var(--primary);display:inline-flex;align-items:center;gap:4px}
+.btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid var(--border);background:var(--elev);color:var(--text);display:inline-flex;align-items:center;gap:6px;font:inherit;white-space:nowrap}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary);font-weight:500}
+.btn.link-btn{border-color:transparent;background:transparent;color:var(--primary);padding:0 4px;height:24px}
+.btn.focus{outline:2px solid var(--primary);outline-offset:2px}
+
+/* table */
+table.t{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.t th{background:var(--bg);text-align:left;font-weight:600;color:var(--text);padding:12px 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+.t th:first-child{border-top-left-radius:4px}.t th:last-child{border-top-right-radius:4px}
+.t td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--elev)}
+.t tr.sel td{background:var(--sel-bg)}
+.t .r{text-align:right}
+.t th.sorted{background:var(--sel-bg)}
+.sort{display:inline-flex;flex-direction:column;margin-left:6px;vertical-align:-3px;line-height:0}
+.sort svg{width:9px;height:6px;fill:var(--text2);stroke:none}
+.sort svg.on{fill:var(--primary)}
+.amt{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.amt.out{color:var(--out)}.amt.in{color:var(--in)}
+.code{color:var(--primary)}
+.sub{color:var(--text2);font-size:12px}
+.wait{font-variant-numeric:tabular-nums;font-weight:600;color:var(--un-fg)}
+
+/* status badge */
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 7px;border-radius:2px;border:1px solid;font-size:12px;font-weight:500;line-height:20px;white-space:nowrap}
+.badge svg{width:12px;height:12px}
+.b-pe{background:var(--pe-bg);color:var(--pe-fg);border-color:var(--pe-bd)}
+.b-su{background:var(--su-bg);color:var(--su-fg);border-color:var(--su-bd)}
+.b-fa{background:var(--fa-bg);color:var(--fa-fg);border-color:var(--fa-bd)}
+.b-un{background:var(--un-bg);color:var(--un-fg);border-color:var(--un-bd);border-style:dashed}
+
+/* pagination */
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px}
+.pager .total{margin-right:auto;color:var(--text2)}
+.pg{min-width:32px;height:32px;border:1px solid var(--border);border-radius:4px;display:grid;place-items:center;background:var(--elev);color:var(--text2)}
+.pg.on{border-color:var(--primary);color:var(--primary);font-weight:600}
+.pg.dis{opacity:.45}
+
+/* drawer */
+.mask{position:absolute;inset:0;background:var(--mask)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:600px;background:var(--elev);display:flex;flex-direction:column;
+  box-shadow:-6px 0 16px 0 rgba(0,0,0,.08),-3px 0 6px -4px rgba(0,0,0,.12),-9px 0 28px 8px rgba(0,0,0,.05)}
+.dr-h{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.dr-h h3{margin:0;font-size:16px;font-weight:600}
+.dr-h .x{margin-left:auto;color:var(--text2)}
+.dr-b{padding:20px 24px;flex:1;overflow:hidden}
+.dr-f{padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;align-items:center}
+.dr-f .hint{margin-right:auto;font-size:12px;color:var(--text2);max-width:340px;line-height:1.45}
+.summary{display:flex;align-items:center;justify-content:space-between;padding:16px;border:1px solid var(--border);border-radius:4px;background:var(--bg);margin-bottom:20px}
+.summary .big{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--out);line-height:1.3}
+.summary .meta{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+dl.desc{display:grid;grid-template-columns:160px 1fr;margin:0 0 20px;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+dl.desc dt,dl.desc dd{margin:0;padding:8px 12px;border-bottom:1px solid var(--border)}
+dl.desc dt{background:var(--bg);color:var(--text2)}
+dl.desc dt:nth-last-of-type(1),dl.desc dd:last-of-type{border-bottom:0}
+.h4{font-size:14px;font-weight:600;margin:0 0 12px}
+.copy{color:var(--text2);margin-left:6px}
+
+/* timeline */
+ol.tl{list-style:none;margin:0 0 20px;padding:0}
+.tl li{position:relative;padding:0 0 14px 26px}
+.tl li::before{content:"";position:absolute;left:5px;top:14px;bottom:-2px;width:2px;background:var(--border)}
+.tl li:last-child::before{display:none}
+.tl .dot{position:absolute;left:0;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid var(--pe-fg);background:var(--elev)}
+.tl .dot.su{border-color:var(--su-fg)}.tl .dot.un{border-color:var(--un-fg);border-style:dashed}.tl .dot.fa{border-color:var(--fa-fg)}
+.tl .dot.wait{border-color:var(--un-fg);border-style:dashed;background:var(--un-bg)}
+.tl .dot.done{border-color:var(--text2)}
+.tl .row{display:flex;gap:12px;align-items:baseline}
+.tl time{font-family:var(--mono);font-size:12px;color:var(--text2);width:64px;flex:none}
+.tl .what{font-weight:600}
+.tl .det{display:block;color:var(--text2);font-size:12px;margin-left:76px}
+.tl li.new .what{color:var(--su-fg)}
+.tl li.new{background:var(--su-bg);border-radius:4px;padding-top:6px;padding-bottom:8px;margin-left:-8px;padding-left:34px}
+.tl li.new .dot{left:8px;top:11px}
+.tl li.new::before{left:13px}
+
+table.mini{width:100%;border-collapse:collapse;font-size:13px}
+.mini th{background:var(--bg);text-align:left;font-weight:600;padding:8px 12px;border:1px solid var(--border)}
+.mini td{padding:8px 12px;border:1px solid var(--border)}
+.mini tr.new td{background:var(--su-bg)}
+
+/* alert */
+.alert{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:4px;border:1px solid;margin-bottom:16px}
+.alert svg{width:16px;height:16px;margin-top:3px}
+.alert b{display:block}
+.al-su{background:var(--su-bg);border-color:var(--su-bd);color:var(--text)}
+.al-su svg{color:var(--su-fg)}
+.al-un{background:var(--un-bg);border-color:var(--un-bd);border-style:dashed;color:var(--text)}
+.al-un svg{color:var(--un-fg)}
+
+/* after-state composition */
+.after{width:1440px;margin:0 auto;display:grid;grid-template-columns:1fr 600px;gap:24px;align-items:start}
+.panel{border:1px solid #B9C2D2;border-radius:8px;overflow:hidden;background:var(--elev)}
+.panel .drawer{position:static;width:auto;box-shadow:none}
+.cap{font-size:12px;color:#4A5772;margin:0 0 8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+
+/* dark strip */
+.dark-wrap{width:1440px;margin:0 auto;border-radius:8px;overflow:hidden;border:1px solid #283851}
+.dark-wrap .inner{background:var(--bg);padding:24px;color:var(--text)}
+.dark-wrap .legend{display:flex;gap:12px;align-items:center;margin-top:16px;color:var(--text2);font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- icon sprite (inline, no network) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.6 3.3-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.1 2.4 3.5 5.2"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.3L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.3 4.3l1.7-1.8M20 20v-4.5h-4.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-up" viewBox="0 0 10 6"><path d="M5 0l5 6H0z"/></symbol>
+  <symbol id="i-down" viewBox="0 0 10 6"><path d="M0 0h10L5 6z"/></symbol>
+</svg>
+
+<!-- ============ SECTION A — list filtered to unknown ============ -->
+<div class="sec">
+  <h1>A. Giao dịch — lọc "Chưa rõ kết quả"</h1>
+  <p>KF-3 bước 2: Chi bấm thẻ "3 giao dịch chưa rõ kết quả, lâu nhất 24 phút" ở Tổng quan vận hành → bảng đã lọc <code>unknown</code>, sắp theo thời gian chờ giảm dần. Bộ lọc phản ánh trên URL.</p>
+</div>
+<div class="frame">
+  <div class="chrome">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="url"><svg class="i"><use href="#i-lock"/></svg><span>https://<b>admin.banking-go.vn</b>/transactions<span class="q">?status=unknown&amp;type=all&amp;from=2026-10-05T00:00&amp;to=2026-10-05T23:59&amp;q=&amp;sort=waited_desc&amp;page=1&amp;size=20</span></span></div>
+  </div>
+  <div class="app">
+    <aside class="sider" aria-label="Điều hướng chính">
+      <div class="logo"><span class="mk">BG</span><span>banking-go<small>Quản trị vận hành</small></span></div>
+      <ul class="menu">
+        <li><svg class="i"><use href="#i-home"/></svg>Tổng quan vận hành</li>
+        <li><svg class="i"><use href="#i-users"/></svg>Khách hàng</li>
+        <li><svg class="i"><use href="#i-wallet"/></svg>Tài khoản</li>
+        <li class="on" aria-current="page"><svg class="i"><use href="#i-swap"/></svg>Giao dịch<span class="cnt" title="Giao dịch chưa rõ kết quả">3</span></li>
+        <li><svg class="i"><use href="#i-id"/></svg>Hàng chờ eKYC</li>
+      </ul>
+      <div class="foot">Vai: Giao dịch viên · chỉ hiện mục có quyền</div>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <nav class="crumb" aria-label="Breadcrumb"><span>Tổng quan vận hành</span><span>/</span><b>Giao dịch</b></nav>
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Ngôn ngữ"><span class="on">VI</span><span>EN</span></div>
+          <span class="icon-btn" role="button" aria-label="Chuyển giao diện tối"><svg class="i i16"><use href="#i-moon"/></svg></span>
+          <div class="user"><span class="ava">C</span><span>Chi <small>· Giao dịch viên</small></span><svg class="i" style="color:var(--text2)"><use href="#i-chev"/></svg></div>
+        </div>
+      </header>
+      <main class="content">
+        <div class="ph">
+          <div><h2>Giao dịch</h2><p>Tra cứu và tra soát giao dịch nạp, rút qua cổng đối tác.</p></div>
+        </div>
+
+        <form class="card filters" aria-label="Bộ lọc giao dịch">
+          <div class="field" style="width:260px"><label>Trạng thái</label>
+            <div class="ctl active"><span class="chip"><svg class="i" style="color:var(--un-fg)"><use href="#i-q"/></svg>Chưa rõ kết quả<svg class="i"><use href="#i-close"/></svg></span><svg class="i chev"><use href="#i-chev"/></svg></div></div>
+          <div class="field" style="width:170px"><label>Loại</label>
+            <div class="ctl">Tất cả<svg class="i chev"><use href="#i-chev"/></svg></div></div>
+          <div class="field" style="width:330px"><label>Khoảng thời gian</label>
+            <div class="ctl num">05/10/2026 00:00<span style="color:var(--text2)">→</span>05/10/2026 23:59<svg class="i chev"><use href="#i-cal"/></svg></div></div>
+          <div class="field" style="width:250px"><label>Số tài khoản / mã giao dịch</label>
+            <div class="ctl ph-text"><svg class="i"><use href="#i-search"/></svg>Nhập số TK hoặc mã GD</div></div>
+          <a class="link" style="margin-left:auto;line-height:32px">Xóa lọc</a>
+        </form>
+
+        <section class="card" aria-label="Danh sách giao dịch">
+          <table class="t">
+            <colgroup><col style="width:190px"><col style="width:165px"><col style="width:95px"><col style="width:150px"><col style="width:140px"><col style="width:165px"><col style="width:110px"><col style="width:135px"></colgroup>
+            <thead><tr>
+              <th>Mã GD</th><th>Thời gian</th><th>Loại</th><th>Tài khoản</th><th class="r">Số tiền</th><th>Trạng thái</th>
+              <th class="sorted" aria-sort="descending">Đã chờ<span class="sort"><svg class="i"><use href="#i-up"/></svg><svg class="i on"><use href="#i-down"/></svg></span></th>
+              <th>Thao tác</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><a class="mono code">TX-20261005-7F3A21</a></td>
+                <td class="num">05/10/2026 10:18:05</td>
+                <td>Rút tiền</td>
+                <td class="mono">1234 5678 9012</td>
+                <td class="r"><span class="amt out">−2.500.000 ₫</span></td>
+                <td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td>
+                <td><span class="wait">24 phút</span></td>
+                <td><button class="btn link-btn" type="button"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</button></td>
+              </tr>
+              <tr>
+                <td><a class="mono code">TX-20261005-81C0D4</a></td>
+                <td class="num">05/10/2026 10:25:41</td>
+                <td>Nạp tiền</td>
+                <td class="mono">9876 5432 1098</td>
+                <td class="r"><span class="amt in">+5.000.000 ₫</span></td>
+                <td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td>
+                <td><span class="wait">17 phút</span></td>
+                <td><button class="btn link-btn" type="button"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</button></td>
+              </tr>
+              <tr>
+                <td><a class="mono code">TX-20261005-93B7E0</a></td>
+                <td class="num">05/10/2026 10:33:12</td>
+                <td>Rút tiền</td>
+                <td class="mono">5566 7788 9900</td>
+                <td class="r"><span class="amt out">−800.000 ₫</span></td>
+                <td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td>
+                <td><span class="wait">9 phút</span></td>
+                <td><button class="btn link-btn" type="button"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pager">
+            <span class="total">Tổng 3 giao dịch · hiển thị 1–3</span>
+            <span class="pg dis"><svg class="i"><use href="#i-left"/></svg></span>
+            <span class="pg on">1</span>
+            <span class="pg dis"><svg class="i"><use href="#i-right"/></svg></span>
+            <span class="ctl" style="width:110px">20 / trang<svg class="i chev"><use href="#i-chev"/></svg></span>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</div>
+<div class="note"><b>Bổ sung (ngoài EXPERIENCE.md):</b> số đếm <code>unknown</code> trên mục "Giao dịch" của sider (viền đứt nét như badge unknown); breadcrumb giữ nguồn "Tổng quan vận hành". Bộ lọc áp dụng ngay khi đổi (không có nút "Lọc") để màn không có nút chính — nút chính duy nhất nằm trong Drawer.</div>
+
+<!-- ============ SECTION B — detail drawer open on row 1 ============ -->
+<div class="sec">
+  <h1>B. Chi tiết giao dịch (Drawer) — trước khi tra soát</h1>
+  <p>KF-3 bước 3: mở dòng đầu. Timeline, mã tham chiếu đối tác, lịch sử tra soát tự động; nút chính "Tra soát lại". URL thêm <code>&amp;detail=TX-20261005-7F3A21</code> để chia sẻ được.</p>
+</div>
+<div class="frame">
+  <div class="chrome">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="url"><svg class="i"><use href="#i-lock"/></svg><span>https://<b>admin.banking-go.vn</b>/transactions<span class="q">?status=unknown&amp;type=all&amp;from=2026-10-05T00:00&amp;to=2026-10-05T23:59&amp;sort=waited_desc&amp;page=1&amp;size=20&amp;detail=TX-20261005-7F3A21</span></span></div>
+  </div>
+  <div class="app tall">
+    <aside class="sider">
+      <div class="logo"><span class="mk">BG</span><span>banking-go<small>Quản trị vận hành</small></span></div>
+      <ul class="menu">
+        <li><svg class="i"><use href="#i-home"/></svg>Tổng quan vận hành</li>
+        <li><svg class="i"><use href="#i-users"/></svg>Khách hàng</li>
+        <li><svg class="i"><use href="#i-wallet"/></svg>Tài khoản</li>
+        <li class="on"><svg class="i"><use href="#i-swap"/></svg>Giao dịch<span class="cnt">3</span></li>
+        <li><svg class="i"><use href="#i-id"/></svg>Hàng chờ eKYC</li>
+      </ul>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <nav class="crumb"><span>Tổng quan vận hành</span><span>/</span><b>Giao dịch</b></nav>
+        <div class="tools">
+          <div class="seg"><span class="on">VI</span><span>EN</span></div>
+          <span class="icon-btn"><svg class="i i16"><use href="#i-moon"/></svg></span>
+          <div class="user"><span class="ava">C</span><span>Chi <small>· Giao dịch viên</small></span></div>
+        </div>
+      </header>
+      <main class="content">
+        <div class="ph"><div><h2>Giao dịch</h2><p>Tra cứu và tra soát giao dịch nạp, rút qua cổng đối tác.</p></div></div>
+        <div class="card filters">
+          <div class="field" style="width:260px"><label>Trạng thái</label><div class="ctl"><span class="chip">Chưa rõ kết quả</span></div></div>
+          <div class="field" style="width:170px"><label>Loại</label><div class="ctl">Tất cả</div></div>
+          <div class="field" style="width:330px"><label>Khoảng thời gian</label><div class="ctl num">05/10/2026 00:00 → 05/10/2026 23:59</div></div>
+        </div>
+        <section class="card">
+          <table class="t">
+            <colgroup><col style="width:190px"><col style="width:165px"><col style="width:95px"><col style="width:150px"><col style="width:140px"><col style="width:165px"><col style="width:110px"><col style="width:135px"></colgroup>
+            <thead><tr><th>Mã GD</th><th>Thời gian</th><th>Loại</th><th>Tài khoản</th><th class="r">Số tiền</th><th>Trạng thái</th><th class="sorted">Đã chờ</th><th>Thao tác</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td class="mono code">TX-20261005-7F3A21</td><td class="num">05/10/2026 10:18:05</td><td>Rút tiền</td><td class="mono">1234 5678 9012</td><td class="r"><span class="amt out">−2.500.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">24 phút</span></td><td>Tra soát lại</td></tr>
+              <tr><td class="mono code">TX-20261005-81C0D4</td><td class="num">05/10/2026 10:25:41</td><td>Nạp tiền</td><td class="mono">9876 5432 1098</td><td class="r"><span class="amt in">+5.000.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">17 phút</span></td><td>Tra soát lại</td></tr>
+              <tr><td class="mono code">TX-20261005-93B7E0</td><td class="num">05/10/2026 10:33:12</td><td>Rút tiền</td><td class="mono">5566 7788 9900</td><td class="r"><span class="amt out">−800.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">9 phút</span></td><td>Tra soát lại</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <div class="mask" aria-hidden="true"></div>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr1-t">
+      <div class="dr-h">
+        <h3 id="dr1-t">Chi tiết giao dịch</h3>
+        <span class="mono" style="color:var(--text2)">TX-20261005-7F3A21</span><svg class="i copy"><use href="#i-copy"/></svg>
+        <svg class="i i16 x" aria-label="Đóng"><use href="#i-close"/></svg>
+      </div>
+      <div class="dr-b">
+        <div class="summary">
+          <div><div class="sub">Rút tiền · Cổng rút (mock)</div><div class="big">−2.500.000 ₫</div></div>
+          <div class="meta" aria-live="polite">
+            <span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span>
+            <span class="sub">Đã chờ <b class="wait">24 phút</b> · tạm giữ 2.500.000 ₫</span>
+          </div>
+        </div>
+
+        <dl class="desc">
+          <dt>Tài khoản</dt><dd><span class="mono">1234 5678 9012</span> · NGUYEN VAN AN</dd>
+          <dt>Mã tham chiếu đối tác</dt><dd><span class="mono">GW-OUT-88213574</span><svg class="i copy"><use href="#i-copy"/></svg></dd>
+          <dt>Số tiền tạm giữ</dt><dd class="num">2.500.000 ₫ <span class="sub">(số dư khả dụng đã trừ, số dư sổ sách chưa đổi)</span></dd>
+          <dt>Kênh tạo</dt><dd>API khách hàng</dd>
+        </dl>
+
+        <p class="h4">Timeline</p>
+        <ol class="tl">
+          <li><span class="dot done"></span><div class="row"><time>10:18:05</time><span class="what">Tạo giao dịch</span></div></li>
+          <li><span class="dot done"></span><div class="row"><time>10:18:05</time><span class="what">Tạm giữ 2.500.000 ₫</span></div></li>
+          <li><span class="dot done"></span><div class="row"><time>10:18:06</time><span class="what">Gửi cổng rút</span></div><span class="det">Mã tham chiếu GW-OUT-88213574</span></li>
+          <li><span class="dot un"></span><div class="row"><time>10:18:36</time><span class="what">Timeout</span></div><span class="det">Cổng rút không phản hồi sau 30 giây → chuyển "Chưa rõ kết quả"</span></li>
+          <li><span class="dot un"></span><div class="row"><time>10:28:36</time><span class="what">Tra soát tự động lần 1</span></div><span class="det">Cổng trả về PROCESSING — đối tác đang xử lý</span></li>
+          <li><span class="dot un"></span><div class="row"><time>10:38:36</time><span class="what">Tra soát tự động lần 2</span></div><span class="det">Không phản hồi sau 30 giây</span></li>
+          <li><span class="dot wait"></span><div class="row"><time>—</time><span class="what" style="color:var(--un-fg)">Chờ tra soát</span></div><span class="det">Tra soát tự động lần 3 dự kiến 10:48:36</span></li>
+        </ol>
+
+        <p class="h4">Lịch sử tra soát</p>
+        <table class="mini">
+          <thead><tr><th style="width:56px">Lần</th><th>Thời điểm</th><th>Cách thức</th><th>Kết quả từ cổng</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td class="num">10:28:36</td><td>Tự động</td><td class="mono">PROCESSING</td></tr>
+            <tr><td class="num">2</td><td class="num">10:38:36</td><td>Tự động</td><td>Timeout (30 giây)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="dr-f">
+        <span class="hint">Tra soát lại gửi truy vấn trạng thái tới cổng rút bằng mã tham chiếu. Không tạo giao dịch mới.</span>
+        <button class="btn" type="button">Đóng</button>
+        <button class="btn primary focus" type="button"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</button>
+      </div>
+    </aside>
+  </div>
+</div>
+<div class="note"><b>Bổ sung:</b> Drawer (thay vì trang riêng) cho chi tiết; khối "Lịch sử tra soát" dạng bảng nhỏ tách khỏi timeline; mốc cuối "Chờ tra soát" có giờ dự kiến lần tự động kế tiếp; tham số <code>detail=</code> trên URL. Chu kỳ tra soát tự động 10 phút là giả định minh họa.</div>
+
+<!-- ============ SECTION C — after-state ============ -->
+<div class="sec">
+  <h1>C. Sau "Tra soát lại" — kết quả Thành công</h1>
+  <p>KF-3 bước 4 (climax): cổng xác nhận thành công → badge đổi, timeline có dòng mới, audit log ghi nhận. Dòng trong bảng cập nhật tương ứng.</p>
+</div>
+<div class="after">
+  <div>
+    <p class="cap">Dòng trong bảng (sau cập nhật)</p>
+    <div class="card" style="overflow:hidden">
+      <table class="t">
+        <colgroup><col style="width:180px"><col style="width:110px"><col style="width:150px"><col style="width:140px"><col style="width:150px"><col style="width:76px"></colgroup>
+        <thead><tr><th>Mã GD</th><th>Loại</th><th>Tài khoản</th><th class="r">Số tiền</th><th>Trạng thái</th><th>Đã chờ</th></tr></thead>
+        <tbody>
+          <tr class="sel"><td class="mono code">TX-20261005-7F3A21</td><td>Rút tiền</td><td class="mono">1234 5678 9012</td><td class="r"><span class="amt out">−2.500.000 ₫</span></td><td><span class="badge b-su"><svg class="i"><use href="#i-check"/></svg>Thành công</span></td><td style="color:var(--text2)">—</td></tr>
+          <tr><td class="mono code">TX-20261005-81C0D4</td><td>Nạp tiền</td><td class="mono">9876 5432 1098</td><td class="r"><span class="amt in">+5.000.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">18 phút</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub" style="margin-top:12px">Dòng đã hoàn tất vẫn hiển thị đến khi tải lại bảng, để GDV thấy kết quả vừa tra soát; số đếm trên sider giảm còn 2.</p>
+  </div>
+  <div class="panel">
+    <div class="drawer">
+      <div class="dr-h">
+        <h3>Chi tiết giao dịch</h3>
+        <span class="mono" style="color:var(--text2)">TX-20261005-7F3A21</span>
+        <svg class="i i16 x"><use href="#i-close"/></svg>
+      </div>
+      <div class="dr-b">
+        <div class="alert al-su" role="status" aria-live="polite">
+          <svg class="i"><use href="#i-check"/></svg>
+          <div><b>Tra soát xong: cổng rút xác nhận thành công.</b><span class="sub">Đã ghi audit log · Chi (Giao dịch viên) · 10:43:12</span></div>
+        </div>
+        <div class="summary">
+          <div><div class="sub">Rút tiền · Cổng rút (mock)</div><div class="big">−2.500.000 ₫</div></div>
+          <div class="meta">
+            <span class="badge b-su"><svg class="i"><use href="#i-check"/></svg>Thành công</span>
+            <span class="sub">Hoàn tất 10:43:12 · tạm giữ đã chuyển thành ghi Nợ</span>
+          </div>
+        </div>
+        <p class="h4">Timeline</p>
+        <ol class="tl">
+          <li><span class="dot done"></span><div class="row"><time>10:18:05</time><span class="what">Tạo giao dịch</span></div></li>
+          <li><span class="dot done"></span><div class="row"><time>10:18:05</time><span class="what">Tạm giữ 2.500.000 ₫</span></div></li>
+          <li><span class="dot done"></span><div class="row"><time>10:18:06</time><span class="what">Gửi cổng rút</span></div></li>
+          <li><span class="dot un"></span><div class="row"><time>10:18:36</time><span class="what">Timeout</span></div></li>
+          <li><span class="dot un"></span><div class="row"><time>10:28:36</time><span class="what">Tra soát tự động lần 1</span></div><span class="det">PROCESSING</span></li>
+          <li><span class="dot un"></span><div class="row"><time>10:38:36</time><span class="what">Tra soát tự động lần 2</span></div><span class="det">Không phản hồi</span></li>
+          <li><span class="dot done"></span><div class="row"><time>10:43:10</time><span class="what">Tra soát thủ công</span></div><span class="det">Thực hiện: Chi (Giao dịch viên)</span></li>
+          <li class="new"><span class="dot su"></span><div class="row"><time>10:43:12</time><span class="what">Thành công</span></div><span class="det">Cổng rút trả về SUCCESS · ghi Nợ 2.500.000 ₫, giải phóng tạm giữ · Đã ghi audit log</span></li>
+        </ol>
+        <p class="h4">Lịch sử tra soát</p>
+        <table class="mini">
+          <thead><tr><th style="width:56px">Lần</th><th>Thời điểm</th><th>Cách thức</th><th>Kết quả từ cổng</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td class="num">10:28:36</td><td>Tự động</td><td class="mono">PROCESSING</td></tr>
+            <tr><td class="num">2</td><td class="num">10:38:36</td><td>Tự động</td><td>Timeout (30 giây)</td></tr>
+            <tr class="new"><td class="num">3</td><td class="num">10:43:10</td><td>Thủ công · Chi</td><td class="mono">SUCCESS</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="dr-f"><button class="btn" type="button">Đóng</button></div>
+    </div>
+  </div>
+</div>
+<div class="note"><b>Bổ sung:</b> Alert thành công trong Drawer kèm dòng "Đã ghi audit log · người thực hiện · giờ"; nút "Tra soát lại" ẩn khi giao dịch đã có kết quả cuối; dòng mới trong timeline và bảng tra soát được tô nền succeeded một lần để dễ nhận ra.</div>
+
+<!-- ============ SECTION D — dark strip ============ -->
+<div class="sec">
+  <h1>D. Dark mode — header bảng + 3 dòng</h1>
+  <p>Cùng component, token <code>*-dark</code> (DESIGN.md). Badge unknown giữ viền đứt nét; số tiền giữ dấu ±.</p>
+</div>
+<div class="dark-wrap theme-dark">
+  <div class="inner">
+    <div class="card" style="overflow:hidden">
+      <table class="t">
+        <colgroup><col style="width:210px"><col style="width:180px"><col style="width:110px"><col style="width:170px"><col style="width:160px"><col style="width:180px"><col style="width:120px"><col style="width:150px"></colgroup>
+        <thead><tr><th>Mã GD</th><th>Thời gian</th><th>Loại</th><th>Tài khoản</th><th class="r">Số tiền</th><th>Trạng thái</th><th class="sorted">Đã chờ<span class="sort"><svg class="i"><use href="#i-up"/></svg><svg class="i on"><use href="#i-down"/></svg></span></th><th>Thao tác</th></tr></thead>
+        <tbody>
+          <tr class="sel"><td class="mono code">TX-20261005-7F3A21</td><td class="num">05/10/2026 10:18:05</td><td>Rút tiền</td><td class="mono">1234 5678 9012</td><td class="r"><span class="amt out">−2.500.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">24 phút</span></td><td><span class="btn link-btn"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</span></td></tr>
+          <tr><td class="mono code">TX-20261005-81C0D4</td><td class="num">05/10/2026 10:25:41</td><td>Nạp tiền</td><td class="mono">9876 5432 1098</td><td class="r"><span class="amt in">+5.000.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">17 phút</span></td><td><span class="btn link-btn"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</span></td></tr>
+          <tr><td class="mono code">TX-20261005-93B7E0</td><td class="num">05/10/2026 10:33:12</td><td>Rút tiền</td><td class="mono">5566 7788 9900</td><td class="r"><span class="amt out">−800.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td><td><span class="wait">9 phút</span></td><td><span class="btn link-btn"><svg class="i"><use href="#i-refresh"/></svg>Tra soát lại</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="legend">Badge dark:
+      <span class="badge b-pe"><svg class="i"><use href="#i-clock"/></svg>Đang xử lý</span>
+      <span class="badge b-su"><svg class="i"><use href="#i-check"/></svg>Thành công</span>
+      <span class="badge b-fa"><svg class="i"><use href="#i-x"/></svg>Thất bại</span>
+      <span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span>
+      <span style="margin-left:auto">Nút chính dark: <span class="btn primary" style="height:28px">Tra soát lại</span></span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

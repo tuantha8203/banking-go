@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tổng quan KH</title>
+<meta name="description" content="Màn Tổng quan web khách hàng trên mobile: thẻ tài khoản, lối tắt, giao dịch gần đây, sáng/tối và trạng thái ẩn số dư.">
+<style>
+/* ======================================================================
+   Governing spine sections (EXPERIENCE.md / DESIGN.md wins on conflict):
+   - EXPERIENCE > Information Architecture > Web KH (Tổng quan row; mobile bottom tab bar)
+   - EXPERIENCE > Component Patterns: Ẩn/hiện số dư, Số tài khoản (nhóm 4 số + sao chép), Badge trạng thái
+   - EXPERIENCE > State Patterns: Giao dịch pending / unknown (badge; unknown never merged into pending)
+   - EXPERIENCE > Accessibility Floor (≥44px targets, not colour-only, amount in words for SR)
+   - EXPERIENCE > Responsive & Platform (< 768px: one column + bottom tab)
+   - DESIGN > Colors, Typography (amount-hero, amount, tabular-nums), Shapes, Elevation (flat),
+     Components (Thẻ tài khoản, Badge trạng thái, Số tiền, Nút chính: one primary per screen)
+   Tokens: DESIGN.md frontmatter, theme 1 "Hải quân Định chế" (light + -dark).
+   Mock only: static, inline CSS, no JS, no network. Fonts: Inter if installed, else system.
+   ====================================================================== */
+.t-light{
+  --primary:#1F3A68; --primary-hover:#2C4F8A; --on-primary:#FFFFFF;
+  --surface-base:#F3F5F9; --surface-elevated:#FFFFFF; --border:#D3DAE6;
+  --text:#13203A; --text-secondary:#4A5772;
+  --success:#1D7A4C; --warning:#8F5B00; --error:#B42318; --info:#1F5FAD;
+  --money-in:#1D7A4C; --money-out:#A0392A;
+  --pending-bg:#E9EFF7; --pending-fg:#1F5FAD; --pending-border:#9AB7DA;
+  --succeeded-bg:#E8F2ED; --succeeded-fg:#1D7A4C; --succeeded-border:#99C3AE;
+  --failed-bg:#F8E9E8; --failed-fg:#B42318; --failed-border:#DD9C97;
+  --unknown-bg:#F4EFE6; --unknown-fg:#8F5B00; --unknown-border:#CDB58C;
+  color-scheme:light;
+}
+.t-dark{
+  --primary:#4170C0; --primary-hover:#3866B2; --on-primary:#FFFFFF;
+  --surface-base:#0C1424; --surface-elevated:#142038; --border:#283851;
+  --text:#E6ECF5; --text-secondary:#A4B0C6;
+  --success:#5FC290; --warning:#E5B045; --error:#F08A7E; --info:#7FB0EE;
+  --money-in:#5FC290; --money-out:#F0A08E;
+  --pending-bg:#253755; --pending-fg:#7FB0EE; --pending-border:#44618A;
+  --succeeded-bg:#203A46; --succeeded-fg:#5FC290; --succeeded-border:#366960;
+  --failed-bg:#373143; --failed-fg:#F08A7E; --failed-border:#775058;
+  --unknown-bg:#35373A; --unknown-fg:#E5B045; --unknown-border:#72613E;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#F3F5F9;color:#13203A}
+body{font-family:Inter,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.57;
+  padding:32px 16px 64px;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---------- presentation shell (not part of the product UI) ---------- */
+.doc{max-width:1720px;margin:0 auto}
+.doc>header h1{font-size:24px;font-weight:600;line-height:1.3}
+.doc>header p{color:#4A5772;max-width:880px;margin-top:8px}
+.doc section{margin-top:40px}
+.doc section>h2{font-size:20px;font-weight:600;line-height:1.35}
+.doc section>p.lead{color:#4A5772;max-width:880px;margin-top:4px}
+.row{display:flex;flex-wrap:wrap;gap:32px;margin-top:20px;align-items:flex-start}
+figure{width:min(390px,100%)}
+figcaption{margin-top:10px;font-size:12px;line-height:1.5;color:#4A5772}
+figcaption b{color:#13203A;font-weight:600}
+
+/* ---------- phone frame (device chrome only) ---------- */
+.phone{width:100%;min-height:844px;display:flex;flex-direction:column;overflow:hidden;
+  border:1px solid #9AA6BC;border-radius:28px;background:var(--surface-base);color:var(--text);
+  font-size:16px;line-height:1.5}
+.statusbar{height:32px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 24px;
+  font-size:12px;font-weight:600;color:var(--text)}
+.content{flex:1;padding:0 16px 16px;display:flex;flex-direction:column;gap:16px}
+
+/* ---------- app bar ---------- */
+.appbar{min-height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 4px 0 16px;
+  background:var(--surface-elevated);border-bottom:1px solid var(--border)}
+.appbar.has-back{padding-left:4px}
+.appbar h1{font-size:20px;font-weight:600;line-height:1.35;flex:1}
+.appbar .sub{display:block;font-size:12px;font-weight:400;color:var(--text-secondary);line-height:1.5}
+
+/* ---------- buttons (AntD-like: 4px radius, flat, bordered) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;
+  border-radius:4px;border:1px solid var(--border);background:var(--surface-elevated);color:var(--text);
+  font:inherit;font-size:16px;font-weight:500;text-decoration:none;cursor:pointer;width:100%}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn[disabled]{background:var(--surface-base);border-color:var(--border);color:var(--text-secondary);opacity:.55;cursor:not-allowed}
+.btn-text{border-color:transparent;background:transparent;color:var(--primary);width:auto;min-height:44px;padding:0 8px;font-size:14px}
+.t-dark .btn-text{color:var(--info)}
+.iconbtn{width:44px;height:44px;min-height:44px;flex:none;padding:0;border:0;background:transparent;color:var(--text-secondary);
+  border-radius:9999px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.appbar .iconbtn{color:var(--text)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.focus-demo{outline:2px solid var(--primary);outline-offset:2px}
+.stack{display:flex;flex-direction:column;gap:12px}
+
+/* ---------- account card ---------- */
+.acct{background:var(--surface-elevated);border:1px solid var(--border);border-radius:8px;padding:16px}
+.acct-top{display:flex;align-items:flex-start;gap:4px}
+.acct-name{flex:1;min-width:0}
+.acct-name .t{font-size:14px;color:var(--text-secondary);line-height:1.57}
+.acct-name .no{display:flex;align-items:center;font-size:14px;color:var(--text)}
+.acct-name .no .iconbtn{width:44px;height:44px;margin:-12px 0 -12px -6px}
+.lbl{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.hero{font-size:32px;font-weight:600;line-height:1.2;letter-spacing:-.01em;margin-top:2px}
+.hero.masked{letter-spacing:.12em}
+.ledger{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:14px;color:var(--text-secondary);
+  display:flex;justify-content:space-between}
+.ledger span:last-child{color:var(--text);font-weight:500}
+
+/* ---------- shortcuts ---------- */
+.shortcuts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.shortcuts .btn{flex-direction:column;gap:4px;min-height:64px;font-size:14px;padding:8px 4px}
+
+/* ---------- section head + list ---------- */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:-8px}
+.sec-head h2{font-size:16px;font-weight:600}
+.list{background:var(--surface-elevated);border:1px solid var(--border);border-radius:4px;list-style:none}
+.list li+li{border-top:1px solid var(--border)}
+.tx{display:flex;gap:12px;align-items:center;min-height:72px;padding:12px;color:inherit;text-decoration:none}
+.tx-main{flex:1;min-width:0}
+.tx-title{font-size:15px;font-weight:500;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap}
+.amt{font-size:16px;font-weight:600;white-space:nowrap}
+.amt.in{color:var(--money-in)}
+.amt.out{color:var(--money-out)}
+
+/* ---------- status badge ---------- */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:0 6px;border-radius:2px;border:1px solid;font-size:12px;
+  line-height:20px;font-weight:500;white-space:nowrap}
+.b-pending{background:var(--pending-bg);color:var(--pending-fg);border-color:var(--pending-border)}
+.b-succeeded{background:var(--succeeded-bg);color:var(--succeeded-fg);border-color:var(--succeeded-border)}
+.b-failed{background:var(--failed-bg);color:var(--failed-fg);border-color:var(--failed-border)}
+.b-unknown{background:var(--unknown-bg);color:var(--unknown-fg);border-color:var(--unknown-border);border-style:dashed}
+
+/* ---------- bottom tab bar ---------- */
+.tabbar{flex:none;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface-elevated);
+  border-top:1px solid var(--border);padding-bottom:12px}
+.tab{min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:12px;line-height:1.3;color:var(--text-secondary);text-decoration:none;border-top:2px solid transparent;margin-top:-1px}
+.tab[aria-current="page"]{color:var(--primary);border-top-color:var(--primary);font-weight:600}
+.t-dark .tab[aria-current="page"]{color:var(--info);border-top-color:var(--info)}
+
+/* ---------- steps (AntD Steps, small) ---------- */
+.steps{display:flex;list-style:none;gap:8px;padding:12px 16px;background:var(--surface-elevated);border-bottom:1px solid var(--border);flex:none}
+.steps li{flex:1;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);min-width:0}
+.steps li:not(:last-child)::after{content:"";flex:1;height:1px;background:var(--border);min-width:8px}
+.steps .dot{width:24px;height:24px;flex:none;border-radius:9999px;border:1px solid var(--border);display:inline-flex;
+  align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.steps .done .dot{border-color:var(--primary);color:var(--primary)}
+.steps .done{color:var(--text)}
+.steps .cur{color:var(--text);font-weight:600}
+.steps .cur .dot{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+
+/* ---------- form ---------- */
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.flabel{font-size:14px;font-weight:500;color:var(--text)}
+.input{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 12px;background:var(--surface-elevated);
+  border:1px solid var(--border);border-radius:4px;font-size:16px;color:var(--text)}
+.input input{all:unset;flex:1;min-width:0;font:inherit;color:inherit}
+.input .suffix{color:var(--text-secondary)}
+.input.focused{border-color:var(--primary);outline:2px solid var(--pending-bg);outline-offset:0}
+.input.invalid{border-color:var(--error)}
+.input.amount input{font-weight:600}
+.select{display:flex;align-items:center;gap:8px;min-height:64px;padding:8px 4px 8px 12px;background:var(--surface-elevated);
+  border:1px solid var(--border);border-radius:4px;text-decoration:none;color:inherit}
+.select .v{flex:1;min-width:0}
+.select .v .a{font-size:15px;font-weight:500}
+.select .v .b{font-size:12px;color:var(--text-secondary)}
+.select .v .b b{color:var(--text);font-weight:600}
+.select .chev{width:36px;display:inline-flex;justify-content:center;color:var(--text-secondary)}
+.help{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.help.err{color:var(--error);display:flex;gap:6px;align-items:flex-start;font-size:14px}
+.help.err .ic{margin-top:3px;flex:none}
+.resolved{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)}
+.resolved .ic{color:var(--success);flex:none}
+.resolved b{font-size:15px;color:var(--text);font-weight:600;letter-spacing:.01em}
+.segmented{display:grid;grid-template-columns:1fr 1fr;padding:2px;background:var(--border);border-radius:4px;gap:2px}
+.segmented a{min-height:44px;display:flex;align-items:center;justify-content:center;font-size:14px;border-radius:2px;
+  color:var(--text-secondary);text-decoration:none}
+.segmented a[aria-current="true"]{background:var(--surface-elevated);color:var(--text);font-weight:600}
+.spacer{flex:1}
+
+/* ---------- descriptions / summary ---------- */
+.panel{background:var(--surface-elevated);border:1px solid var(--border);border-radius:4px}
+.panel-hero{padding:16px;border-bottom:1px solid var(--border)}
+.words{font-size:14px;color:var(--text-secondary);margin-top:4px}
+.desc{list-style:none}
+.desc li{display:flex;justify-content:space-between;gap:16px;padding:12px 16px;font-size:14px}
+.desc li+li{border-top:1px solid var(--border)}
+.desc .k{color:var(--text-secondary);flex:none}
+.desc .v{text-align:right;color:var(--text);font-weight:500;min-width:0;overflow-wrap:anywhere}
+.desc .v small{display:block;font-size:12px;font-weight:400;color:var(--text-secondary)}
+.note{font-size:14px;color:var(--text-secondary)}
+
+/* ---------- result ---------- */
+.result-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:16px 0 4px}
+.result-icon{width:64px;height:64px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:1px solid}
+.result-icon.ok{background:var(--succeeded-bg);border-color:var(--succeeded-border);color:var(--succeeded-fg)}
+.result-icon.unk{background:var(--unknown-bg);border-color:var(--unknown-border);border-style:dashed;color:var(--unknown-fg)}
+.result-head h2{font-size:24px;font-weight:600;line-height:1.3}
+.result-head .hero{margin-top:4px}
+.result-head p{font-size:14px;color:var(--text-secondary)}
+
+/* ---------- alert (AntD Alert, warning tone mapped to unknown tokens) ---------- */
+.alert{display:flex;gap:10px;padding:12px;border:1px solid var(--unknown-border);background:var(--unknown-bg);border-radius:4px;font-size:14px;color:var(--text)}
+.alert .ic{color:var(--unknown-fg);flex:none;margin-top:3px}
+
+/* ---------- timeline (AntD Timeline) ---------- */
+.tl{list-style:none;padding:16px 16px 4px}
+.tl li{position:relative;padding:0 0 16px 32px}
+.tl li::before{content:"";position:absolute;left:9px;top:22px;bottom:0;width:1px;background:var(--border)}
+.tl li:last-child::before{display:none}
+.tl .d{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:9999px;border:1px solid;display:flex;
+  align-items:center;justify-content:center}
+.tl .done .d{background:var(--succeeded-bg);border-color:var(--succeeded-border);color:var(--succeeded-fg)}
+.tl .now .d{background:var(--unknown-bg);border-color:var(--unknown-border);border-style:dashed;color:var(--unknown-fg)}
+.tl .s{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:500}
+.tl .s time{font-weight:400;color:var(--text-secondary);font-size:12px;line-height:22px}
+.tl .c{font-size:12px;color:var(--text-secondary)}
+.tl .now .s{color:var(--unknown-fg)}
+.live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="doc">
+  <header>
+    <h1>Web KH · Tổng quan (mobile)</h1>
+    <p>Khung 390px. Thẻ tài khoản với số dư khả dụng dạng amount-hero, nút ẩn/hiện, số dư sổ sách ở dòng phụ;
+    lối tắt Chuyển tiền (nút chính duy nhất) / Nạp / Rút; giao dịch gần đây với badge 4 trạng thái. Số dư sổ sách
+    14.150.000 ₫ = khả dụng 12.450.000 ₫ + 500.000 ₫ (rút chưa rõ kết quả) + 1.200.000 ₫ (đang xử lý) đang tạm giữ.</p>
+  </header>
+
+  <section>
+    <h2>1. Hiện số dư — sáng và tối</h2>
+    <p class="lead">Mặc định hiện số dư. Cùng bố cục, chỉ đổi bộ token (light / -dark).</p>
+    <div class="row">
+      <figure>
+<div class="phone t-light" role="region" aria-label="Tổng quan — hiện số dư — sáng">
+  <div class="statusbar" aria-hidden="true"><span class="num">09:41</span><span>5G · 86%</span></div>
+  <header class="appbar"><h1>Tổng quan<span class="sub">Nguyễn Văn An</span></h1></header>
+  <main class="content" style="padding-top:16px">
+    <article class="acct" aria-label="Tài khoản thanh toán 1234 5678 9012">
+      <div class="acct-top">
+        <div class="acct-name">
+          <div class="t">Tài khoản thanh toán</div>
+          <div class="no"><span class="num">1234 5678 9012</span><button class="iconbtn" type="button" aria-label="Sao chép số tài khoản"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
+        </div>
+        <button class="iconbtn" type="button" aria-pressed="false" aria-label="Ẩn số dư"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+      <div style="margin-top:8px">
+        <div class="lbl">Số dư khả dụng</div>
+        <div class="hero num" aria-describedby="w-light">12.450.000 ₫</div><span id="w-light" hidden>Mười hai triệu bốn trăm năm mươi nghìn đồng</span>
+      </div>
+      <div class="ledger"><span>Số dư sổ sách</span><span class="num">14.150.000 ₫</span></div>
+    </article>
+
+    <div class="shortcuts" role="group" aria-label="Lối tắt">
+      <a class="btn btn-primary" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg>Chuyển tiền</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>Nạp</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>Rút</a>
+    </div>
+
+    <div class="sec-head"><h2>Giao dịch gần đây</h2><a class="btn btn-text" href="#">Xem tất cả</a></div>
+    <ul class="list" aria-label="Giao dịch gần đây">
+      <li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Nhận tiền từ TRAN THI MAI</div><div class="tx-meta"><span class="num">Hôm nay 09:12</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt in num">+2.000.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Rút tiền qua cổng thanh toán</div><div class="tx-meta"><span class="num">Hôm nay 08:40</span><span class="badge b-unknown"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7"/><path d="M12 17.2h.01"/></svg>Chưa rõ kết quả</span></div></div><span class="amt out num">−500.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến LE VAN CUONG</div><div class="tx-meta"><span class="num">Hôm nay 08:05</span><span class="badge b-pending"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Đang xử lý</span></div></div><span class="amt out num">−1.200.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến NGUYEN VAN BINH</div><div class="tx-meta"><span class="num">Hôm qua 19:30</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt out num">−350.000 ₫</span></a></li>
+    </ul>
+  </main>
+  <nav class="tabbar" aria-label="Điều hướng chính"><a class="tab" href="#" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Tổng quan</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg><span>Chuyển tiền</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Lịch sử</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18"/><path d="M8 3h8"/></svg><span>Tiết kiệm</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span>Khác</span></a></nav>
+</div><figcaption><b>Sáng.</b> Badge “Chưa rõ kết quả” viền đứt nét, “Đang xử lý” viền liền — không gộp. Số tiền có dấu + / − và màu money-in / money-out.</figcaption></figure>
+      <figure>
+<div class="phone t-dark" role="region" aria-label="Tổng quan — hiện số dư — tối">
+  <div class="statusbar" aria-hidden="true"><span class="num">09:41</span><span>5G · 86%</span></div>
+  <header class="appbar"><h1>Tổng quan<span class="sub">Nguyễn Văn An</span></h1></header>
+  <main class="content" style="padding-top:16px">
+    <article class="acct" aria-label="Tài khoản thanh toán 1234 5678 9012">
+      <div class="acct-top">
+        <div class="acct-name">
+          <div class="t">Tài khoản thanh toán</div>
+          <div class="no"><span class="num">1234 5678 9012</span><button class="iconbtn" type="button" aria-label="Sao chép số tài khoản"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
+        </div>
+        <button class="iconbtn" type="button" aria-pressed="false" aria-label="Ẩn số dư"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+      <div style="margin-top:8px">
+        <div class="lbl">Số dư khả dụng</div>
+        <div class="hero num" aria-describedby="w-dark">12.450.000 ₫</div><span id="w-dark" hidden>Mười hai triệu bốn trăm năm mươi nghìn đồng</span>
+      </div>
+      <div class="ledger"><span>Số dư sổ sách</span><span class="num">14.150.000 ₫</span></div>
+    </article>
+
+    <div class="shortcuts" role="group" aria-label="Lối tắt">
+      <a class="btn btn-primary" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg>Chuyển tiền</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>Nạp</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>Rút</a>
+    </div>
+
+    <div class="sec-head"><h2>Giao dịch gần đây</h2><a class="btn btn-text" href="#">Xem tất cả</a></div>
+    <ul class="list" aria-label="Giao dịch gần đây">
+      <li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Nhận tiền từ TRAN THI MAI</div><div class="tx-meta"><span class="num">Hôm nay 09:12</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt in num">+2.000.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Rút tiền qua cổng thanh toán</div><div class="tx-meta"><span class="num">Hôm nay 08:40</span><span class="badge b-unknown"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7"/><path d="M12 17.2h.01"/></svg>Chưa rõ kết quả</span></div></div><span class="amt out num">−500.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến LE VAN CUONG</div><div class="tx-meta"><span class="num">Hôm nay 08:05</span><span class="badge b-pending"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Đang xử lý</span></div></div><span class="amt out num">−1.200.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến NGUYEN VAN BINH</div><div class="tx-meta"><span class="num">Hôm qua 19:30</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt out num">−350.000 ₫</span></a></li>
+    </ul>
+  </main>
+  <nav class="tabbar" aria-label="Điều hướng chính"><a class="tab" href="#" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Tổng quan</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg><span>Chuyển tiền</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Lịch sử</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18"/><path d="M8 3h8"/></svg><span>Tiết kiệm</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span>Khác</span></a></nav>
+</div><figcaption><b>Tối.</b> Token hậu tố -dark; nút chính #4170C0 chữ trắng.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Ẩn số dư</h2>
+    <p class="lead">Sau khi Quý khách bấm nút mắt: số dư khả dụng và số dư sổ sách hiển thị “••••••”; lựa chọn được nhớ theo thiết bị.
+    Danh sách giao dịch gần đây giữ nguyên.</p>
+    <div class="row">
+      <figure>
+<div class="phone t-light" role="region" aria-label="Tổng quan — ẩn số dư — sáng">
+  <div class="statusbar" aria-hidden="true"><span class="num">09:41</span><span>5G · 86%</span></div>
+  <header class="appbar"><h1>Tổng quan<span class="sub">Nguyễn Văn An</span></h1></header>
+  <main class="content" style="padding-top:16px">
+    <article class="acct" aria-label="Tài khoản thanh toán 1234 5678 9012">
+      <div class="acct-top">
+        <div class="acct-name">
+          <div class="t">Tài khoản thanh toán</div>
+          <div class="no"><span class="num">1234 5678 9012</span><button class="iconbtn" type="button" aria-label="Sao chép số tài khoản"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
+        </div>
+        <button class="iconbtn" type="button" aria-pressed="true" aria-label="Hiện số dư"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
+      </div>
+      <div style="margin-top:8px">
+        <div class="lbl">Số dư khả dụng</div>
+        <div class="hero masked" aria-label="Số dư đang ẩn">••••••</div>
+      </div>
+      <div class="ledger"><span>Số dư sổ sách</span><span>••••••</span></div>
+    </article>
+
+    <div class="shortcuts" role="group" aria-label="Lối tắt">
+      <a class="btn btn-primary" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg>Chuyển tiền</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>Nạp</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>Rút</a>
+    </div>
+
+    <div class="sec-head"><h2>Giao dịch gần đây</h2><a class="btn btn-text" href="#">Xem tất cả</a></div>
+    <ul class="list" aria-label="Giao dịch gần đây">
+      <li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Nhận tiền từ TRAN THI MAI</div><div class="tx-meta"><span class="num">Hôm nay 09:12</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt in num">+2.000.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Rút tiền qua cổng thanh toán</div><div class="tx-meta"><span class="num">Hôm nay 08:40</span><span class="badge b-unknown"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7"/><path d="M12 17.2h.01"/></svg>Chưa rõ kết quả</span></div></div><span class="amt out num">−500.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến LE VAN CUONG</div><div class="tx-meta"><span class="num">Hôm nay 08:05</span><span class="badge b-pending"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Đang xử lý</span></div></div><span class="amt out num">−1.200.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến NGUYEN VAN BINH</div><div class="tx-meta"><span class="num">Hôm qua 19:30</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt out num">−350.000 ₫</span></a></li>
+    </ul>
+  </main>
+  <nav class="tabbar" aria-label="Điều hướng chính"><a class="tab" href="#" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Tổng quan</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg><span>Chuyển tiền</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Lịch sử</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18"/><path d="M8 3h8"/></svg><span>Tiết kiệm</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span>Khác</span></a></nav>
+</div><figcaption><b>Sáng · đã ẩn.</b> Nút đổi sang biểu tượng mắt gạch, nhãn “Hiện số dư” (aria-pressed=true).</figcaption></figure>
+      <figure>
+<div class="phone t-dark" role="region" aria-label="Tổng quan — ẩn số dư — tối">
+  <div class="statusbar" aria-hidden="true"><span class="num">09:41</span><span>5G · 86%</span></div>
+  <header class="appbar"><h1>Tổng quan<span class="sub">Nguyễn Văn An</span></h1></header>
+  <main class="content" style="padding-top:16px">
+    <article class="acct" aria-label="Tài khoản thanh toán 1234 5678 9012">
+      <div class="acct-top">
+        <div class="acct-name">
+          <div class="t">Tài khoản thanh toán</div>
+          <div class="no"><span class="num">1234 5678 9012</span><button class="iconbtn" type="button" aria-label="Sao chép số tài khoản"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div>
+        </div>
+        <button class="iconbtn" type="button" aria-pressed="true" aria-label="Hiện số dư"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
+      </div>
+      <div style="margin-top:8px">
+        <div class="lbl">Số dư khả dụng</div>
+        <div class="hero masked" aria-label="Số dư đang ẩn">••••••</div>
+      </div>
+      <div class="ledger"><span>Số dư sổ sách</span><span>••••••</span></div>
+    </article>
+
+    <div class="shortcuts" role="group" aria-label="Lối tắt">
+      <a class="btn btn-primary" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg>Chuyển tiền</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>Nạp</a>
+      <a class="btn" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>Rút</a>
+    </div>
+
+    <div class="sec-head"><h2>Giao dịch gần đây</h2><a class="btn btn-text" href="#">Xem tất cả</a></div>
+    <ul class="list" aria-label="Giao dịch gần đây">
+      <li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Nhận tiền từ TRAN THI MAI</div><div class="tx-meta"><span class="num">Hôm nay 09:12</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt in num">+2.000.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Rút tiền qua cổng thanh toán</div><div class="tx-meta"><span class="num">Hôm nay 08:40</span><span class="badge b-unknown"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7"/><path d="M12 17.2h.01"/></svg>Chưa rõ kết quả</span></div></div><span class="amt out num">−500.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến LE VAN CUONG</div><div class="tx-meta"><span class="num">Hôm nay 08:05</span><span class="badge b-pending"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Đang xử lý</span></div></div><span class="amt out num">−1.200.000 ₫</span></a></li><li><a class="tx" href="#"><div class="tx-main"><div class="tx-title">Chuyển đến NGUYEN VAN BINH</div><div class="tx-meta"><span class="num">Hôm qua 19:30</span><span class="badge b-succeeded"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Thành công</span></div></div><span class="amt out num">−350.000 ₫</span></a></li>
+    </ul>
+  </main>
+  <nav class="tabbar" aria-label="Điều hướng chính"><a class="tab" href="#" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Tổng quan</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8h14l-4-4"/><path d="M20 16H6l4 4"/></svg><span>Chuyển tiền</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Lịch sử</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18"/><path d="M8 3h8"/></svg><span>Tiết kiệm</span></a><a class="tab" href="#"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span>Khác</span></a></nav>
+</div><figcaption><b>Tối · đã ẩn.</b></figcaption></figure>
+    </div>
+  </section>
+</div>
+</body>
+</html>

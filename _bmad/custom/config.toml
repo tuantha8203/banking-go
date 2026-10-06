@@ -1,0 +1,6 @@
+[core]
+output_folder = "{project-root}/docs/foundation/_bmad"
+
+[modules.bmm]
+planning_artifacts = "{project-root}/docs/foundation/_bmad/planning-artifacts"
+implementation_artifacts = "{project-root}/docs/foundation/_bmad/implementation-artifacts"

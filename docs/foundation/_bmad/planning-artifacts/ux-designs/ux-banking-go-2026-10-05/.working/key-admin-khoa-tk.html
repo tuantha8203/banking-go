@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Khóa tài khoản</title>
+<style>
+/*
+  KEY SCREEN — Web admin · Tài khoản (chi tiết) + Dialog "Khóa tài khoản"
+  Spine sections governing this screen:
+    EXPERIENCE.md → Information Architecture / Web admin (sider theo vai GDV, mục R1; đang ở "Tài khoản")
+                  → Key Flows / KF-4 (GDV Chi khóa ghi Nợ tài khoản, BF-6; R2 sẽ thành yêu cầu chờ KSV duyệt)
+                  → Component Patterns: Dialog thao tác nhạy cảm (admin) — tóm tắt đối tượng + trạng thái trước → sau,
+                    lý do bắt buộc ≥ 10 ký tự, nút xác nhận chỉ bật khi đủ, không thao tác hàng loạt;
+                    Số tài khoản (nhóm 4 số, nút sao chép); Bảng admin; Badge trạng thái
+                  → Voice and Tone / Admin (glossary: "khóa ghi Nợ", "tạm giữ")
+                  → Interaction Primitives: Bàn phím (Esc đóng dialog, không gửi)
+                  → Accessibility Floor (dialog giữ focus, label thật, aria-describedby, aria-live cho banner)
+    DESIGN.md     → Components: Dialog thao tác nhạy cảm (nút xác nhận dùng `error`), Thẻ tài khoản (amount-hero, rounded.lg),
+                    Badge trạng thái, Số tiền; Colors; Typography (mono cho số TK, tabular-nums);
+                    Elevation (phẳng, chỉ dialog có bóng); Shapes (4px)
+  Patterns added beyond EXPERIENCE.md (flagged): see .note blocks marked "Bổ sung".
+  Browser chrome colours are presentation only, not product tokens.
+*/
+:root{
+  --primary:#1F3A68; --primary-hover:#2C4F8A; --on-primary:#FFFFFF;
+  --bg:#F3F5F9; --elev:#FFFFFF; --border:#D3DAE6; --text:#13203A; --text2:#4A5772;
+  --success:#1D7A4C; --warning:#8F5B00; --error:#B42318; --info:#1F5FAD;
+  --in:#1D7A4C; --out:#A0392A;
+  --pe-bg:#E9EFF7; --pe-fg:#1F5FAD; --pe-bd:#9AB7DA;
+  --su-bg:#E8F2ED; --su-fg:#1D7A4C; --su-bd:#99C3AE;
+  --fa-bg:#F8E9E8; --fa-fg:#B42318; --fa-bd:#DD9C97;
+  --un-bg:#F4EFE6; --un-fg:#8F5B00; --un-bd:#CDB58C;
+  --sel-bg:#E9EFF7;
+  --mask:rgba(19,32,58,.45);
+  --font:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#DCE1EA;color:var(--text);font:400 14px/1.57 var(--font);padding:32px 0 64px}
+.mono{font-family:var(--mono);font-size:13px}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:14px;height:14px;flex:none;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg.i16{width:16px;height:16px}
+
+.sec{width:1440px;margin:0 auto 16px}
+.sec h1{font-size:20px;font-weight:600;margin:0 0 4px}
+.sec p{margin:0;color:#4A5772;font-size:13px}
+.note{width:1440px;margin:12px auto 40px;font-size:12px;color:#4A5772;border-left:3px solid #9AB7DA;padding:4px 12px;background:#FFFFFF}
+
+.frame{width:1440px;margin:0 auto;border:1px solid #B9C2D2;border-radius:8px;overflow:hidden;background:var(--bg);box-shadow:0 8px 24px rgba(19,32,58,.12)}
+.chrome{height:44px;background:#E3E7EE;border-bottom:1px solid #C9D0DC;display:flex;align-items:center;gap:14px;padding:0 14px}
+.dots{display:flex;gap:7px}.dots i{width:12px;height:12px;border-radius:50%;background:#C3CAD6;display:block}
+.url{flex:1;height:28px;background:#FFFFFF;border:1px solid #C9D0DC;border-radius:14px;display:flex;align-items:center;gap:8px;padding:0 14px;font:12px/1 var(--mono);color:#4A5772;white-space:nowrap}
+.url b{color:#13203A;font-weight:500}
+
+.app{display:flex;position:relative;height:900px;background:var(--bg)}
+.app.short{height:430px}
+.sider{width:232px;flex:none;background:var(--elev);border-right:1px solid var(--border)}
+.logo{height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--border);font-weight:600;font-size:15px}
+.logo .mk{width:28px;height:28px;border-radius:4px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-size:13px;font-weight:700}
+.logo small{display:block;font-size:11px;font-weight:400;color:var(--text2);line-height:1.2}
+.menu{list-style:none;margin:8px 0;padding:0 8px}
+.menu li{height:40px;display:flex;align-items:center;gap:10px;padding:0 16px;border-radius:4px;margin:4px 0}
+.menu li svg{width:16px;height:16px}
+.menu li.on{background:var(--sel-bg);color:var(--primary);font-weight:600;position:relative}
+.menu li.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--primary)}
+.menu .cnt{margin-left:auto;font-size:12px;font-weight:600;line-height:20px;min-width:20px;padding:0 6px;border-radius:2px;border:1px dashed var(--un-bd);background:var(--un-bg);color:var(--un-fg);text-align:center}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:56px;flex:none;background:var(--elev);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.crumb{color:var(--text2);display:flex;gap:8px;align-items:center}
+.crumb b{color:var(--text);font-weight:400}
+.tools{display:flex;align-items:center;gap:16px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:4px;padding:2px;background:var(--bg)}
+.seg span{padding:0 10px;line-height:24px;border-radius:2px;font-size:13px;color:var(--text2)}
+.seg span.on{background:var(--elev);color:var(--text);font-weight:600;box-shadow:0 0 0 1px var(--border)}
+.icon-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:50%;display:grid;place-items:center;color:var(--text2);background:var(--elev)}
+.user{display:flex;align-items:center;gap:8px}
+.ava{width:32px;height:32px;border-radius:50%;background:var(--sel-bg);color:var(--primary);display:grid;place-items:center;font-weight:600}
+.user small{color:var(--text2)}
+.content{padding:24px;flex:1}
+
+/* page header */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.ph h2{font-size:20px;font-weight:600;line-height:1.35;margin:0;display:flex;align-items:center;gap:12px}
+.ph .meta{margin-top:4px;color:var(--text2);display:flex;align-items:center;gap:8px}
+.copy{color:var(--text2)}
+
+.btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid var(--border);background:var(--elev);color:var(--text);display:inline-flex;align-items:center;gap:6px;font:inherit;white-space:nowrap}
+.btn.danger-ghost{border-color:var(--error);color:var(--error)}
+.btn.danger{background:var(--error);border-color:var(--error);color:#FFFFFF;font-weight:500}
+.btn[disabled]{background:var(--bg);border-color:var(--border);color:var(--text2);opacity:.6;cursor:not-allowed;font-weight:500}
+.btn.focus{outline:2px solid var(--error);outline-offset:2px}
+
+/* account status tag (Bổ sung) */
+.tag{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:2px;border:1px solid;font-size:12px;font-weight:600;line-height:22px;white-space:nowrap}
+.tag svg{width:12px;height:12px}
+.st-active{background:var(--su-bg);color:var(--su-fg);border-color:var(--su-bd)}
+.st-debit{background:var(--un-bg);color:var(--warning);border-color:var(--un-bd)}
+.st-full{background:var(--fa-bg);color:var(--fa-fg);border-color:var(--fa-bd)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.acard{background:var(--elev);border:1px solid var(--border);border-radius:8px;padding:16px 20px}
+.acard .lbl{color:var(--text2);font-size:12px}
+.acard .hero{font-size:32px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums;margin-top:4px}
+.acard .hint{font-size:12px;color:var(--text2);margin-top:4px}
+.card{background:var(--elev);border:1px solid var(--border);border-radius:4px}
+.card-h{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600}
+.two{display:grid;grid-template-columns:360px 1fr;gap:16px}
+dl.desc{display:grid;grid-template-columns:150px 1fr;margin:0}
+dl.desc dt,dl.desc dd{margin:0;padding:9px 16px;border-bottom:1px solid var(--border)}
+dl.desc dt{color:var(--text2)}
+dl.desc dt:last-of-type,dl.desc dd:last-of-type{border-bottom:0}
+
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+.t th{background:var(--bg);text-align:left;font-weight:600;padding:10px 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+.t td{padding:12px 16px;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t tr:last-child td{border-bottom:0}
+.t .r{text-align:right}
+.amt{font-weight:600;font-variant-numeric:tabular-nums}
+.amt.out{color:var(--out)}.amt.in{color:var(--in)}
+.code{color:var(--primary)}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 7px;border-radius:2px;border:1px solid;font-size:12px;font-weight:500;line-height:20px}
+.badge svg{width:12px;height:12px}
+.b-su{background:var(--su-bg);color:var(--su-fg);border-color:var(--su-bd)}
+.b-un{background:var(--un-bg);color:var(--un-fg);border-color:var(--un-bd);border-style:dashed}
+
+/* modal */
+.mask{position:absolute;inset:0;background:var(--mask)}
+.modal{position:absolute;left:50%;top:90px;transform:translateX(-50%);width:560px;background:var(--elev);border-radius:8px;
+  box-shadow:0 6px 16px 0 rgba(0,0,0,.08),0 3px 6px -4px rgba(0,0,0,.12),0 9px 28px 8px rgba(0,0,0,.05)}
+.m-h{padding:16px 24px 8px;display:flex;align-items:center;gap:10px}
+.m-h h3{margin:0;font-size:16px;font-weight:600}
+.m-h .x{margin-left:auto;color:var(--text2)}
+.m-b{padding:8px 24px 4px}
+.m-f{padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:8px}
+.obj{border:1px solid var(--border);background:var(--bg);border-radius:4px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:2px 16px;margin-bottom:16px}
+.obj span:nth-child(odd){color:var(--text2)}
+.flabel{display:block;font-weight:600;margin-bottom:8px}
+.flabel .req{color:var(--error);margin-left:2px}
+.radios{display:grid;gap:8px;margin-bottom:16px}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:4px;padding:10px 12px}
+.radio.on{border-color:var(--primary);background:var(--sel-bg)}
+.radio .rd{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);background:var(--elev);flex:none;margin-top:3px;position:relative}
+.radio.on .rd{border-color:var(--primary)}
+.radio.on .rd::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--primary)}
+.radio b{display:block;font-weight:600}
+.radio small{display:block;color:var(--text2);font-size:12px}
+.ba{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:4px;margin-bottom:16px}
+.ba .k{color:var(--text2);margin-right:4px}
+.ba .arrow{color:var(--text2)}
+.ta{width:100%;min-height:88px;border:1px solid var(--border);border-radius:4px;padding:6px 11px;background:var(--elev);color:var(--text);font:inherit}
+.ta.focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(31,58,104,.15)}
+.ta .caret{display:inline-block;width:1px;height:16px;background:var(--text);vertical-align:-3px}
+.ta-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:4px}
+.ta-foot .ok{color:var(--success)}
+
+.alert{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:4px;border:1px solid;margin-bottom:16px}
+.alert svg{width:16px;height:16px;margin-top:3px}
+.al-su{background:var(--su-bg);border-color:var(--su-bd)}
+.al-su svg{color:var(--su-fg)}
+.alert .x{margin-left:auto;color:var(--text2)}
+.alert small{display:block;color:var(--text2);font-size:12px}
+
+.stage{width:1440px;margin:0 auto;position:relative;height:640px;border-radius:8px;overflow:hidden;background:var(--mask);border:1px solid #B9C2D2}
+.stage .modal{top:40px}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.6 3.3-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.1 2.4 3.5 5.2"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17h.01"/></symbol>
+</svg>
+
+<!-- ============ SECTION 1 — account page + dialog (confirm disabled) ============ -->
+<div class="sec">
+  <h1>1. Tài khoản — Dialog "Khóa tài khoản" (lý do chưa đủ, nút xác nhận tắt)</h1>
+  <p>KF-4 bước 2: Chi tra cứu theo CCCD → mở Tài khoản → "Khóa tài khoản". Mức mặc định chọn Khóa ghi Nợ; lý do mới 6/10 ký tự.</p>
+</div>
+<div class="frame">
+  <div class="chrome">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="url"><svg class="i"><use href="#i-lock"/></svg><span>https://<b>admin.banking-go.vn</b>/accounts/123456789012</span></div>
+  </div>
+  <div class="app">
+    <aside class="sider" aria-label="Điều hướng chính">
+      <div class="logo"><span class="mk">BG</span><span>banking-go<small>Quản trị vận hành</small></span></div>
+      <ul class="menu">
+        <li><svg class="i"><use href="#i-home"/></svg>Tổng quan vận hành</li>
+        <li><svg class="i"><use href="#i-users"/></svg>Khách hàng</li>
+        <li class="on" aria-current="page"><svg class="i"><use href="#i-wallet"/></svg>Tài khoản</li>
+        <li><svg class="i"><use href="#i-swap"/></svg>Giao dịch<span class="cnt">3</span></li>
+        <li><svg class="i"><use href="#i-id"/></svg>Hàng chờ eKYC</li>
+      </ul>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <nav class="crumb" aria-label="Breadcrumb"><span>Khách hàng</span><span>/</span><span>NGUYEN VAN AN</span><span>/</span><b>Tài khoản <span class="mono">1234 5678 9012</span></b></nav>
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Ngôn ngữ"><span class="on">VI</span><span>EN</span></div>
+          <span class="icon-btn" role="button" aria-label="Chuyển giao diện tối"><svg class="i i16"><use href="#i-moon"/></svg></span>
+          <div class="user"><span class="ava">C</span><span>Chi <small>· Giao dịch viên</small></span><svg class="i" style="color:var(--text2)"><use href="#i-chev"/></svg></div>
+        </div>
+      </header>
+      <main class="content">
+        <div class="ph">
+          <div>
+            <h2>NGUYEN VAN AN <span class="tag st-active"><svg class="i"><use href="#i-check"/></svg>Hoạt động</span></h2>
+            <div class="meta"><span class="mono" style="color:var(--text)">1234 5678 9012</span><svg class="i copy" aria-label="Sao chép số tài khoản"><use href="#i-copy"/></svg><span>· Tài khoản thanh toán · VND</span></div>
+          </div>
+          <button class="btn danger-ghost" type="button"><svg class="i"><use href="#i-lock"/></svg>Khóa tài khoản</button>
+        </div>
+
+        <div class="cards">
+          <div class="acard"><div class="lbl">Số dư khả dụng</div><div class="hero">46.250.000 ₫</div><div class="hint">= Số dư sổ sách − Tạm giữ</div></div>
+          <div class="acard"><div class="lbl">Số dư sổ sách</div><div class="hero">48.750.000 ₫</div><div class="hint">Cập nhật 05/10/2026 10:42</div></div>
+          <div class="acard"><div class="lbl">Tạm giữ</div><div class="hero">2.500.000 ₫</div><div class="hint">1 giao dịch chưa rõ kết quả</div></div>
+        </div>
+
+        <div class="two">
+          <section class="card">
+            <div class="card-h">Thông tin tài khoản</div>
+            <dl class="desc">
+              <dt>Chủ tài khoản</dt><dd>NGUYEN VAN AN</dd>
+              <dt>CCCD</dt><dd class="mono">001090012345</dd>
+              <dt>Loại</dt><dd>Thanh toán · VND</dd>
+              <dt>Ngày mở</dt><dd class="num">12/03/2026</dd>
+              <dt>Trạng thái</dt><dd><span class="tag st-active"><svg class="i"><use href="#i-check"/></svg>Hoạt động</span></dd>
+            </dl>
+          </section>
+          <section class="card">
+            <div class="card-h">Giao dịch gần đây</div>
+            <table class="t">
+              <colgroup><col style="width:190px"><col style="width:105px"><col><col style="width:135px"><col style="width:160px"></colgroup>
+              <thead><tr><th>Mã GD</th><th>Thời gian</th><th>Nội dung</th><th class="r">Số tiền</th><th>Trạng thái</th></tr></thead>
+              <tbody>
+                <tr><td class="mono code">TX-20261005-7F3A21</td><td class="num">05/10 10:18</td><td>Rút tiền qua cổng rút</td><td class="r"><span class="amt out">−2.500.000 ₫</span></td><td><span class="badge b-un"><svg class="i"><use href="#i-q"/></svg>Chưa rõ kết quả</span></td></tr>
+                <tr><td class="mono code">TX-20261004-55A2C9</td><td class="num">04/10 19:02</td><td>Nhận từ <span class="mono">9876 5432 1098</span></td><td class="r"><span class="amt in">+3.000.000 ₫</span></td><td><span class="badge b-su"><svg class="i"><use href="#i-check"/></svg>Thành công</span></td></tr>
+                <tr><td class="mono code">TX-20261003-1B9E44</td><td class="num">03/10 08:47</td><td>Chuyển tới <span class="mono">5566 7788 9900</span></td><td class="r"><span class="amt out">−1.200.000 ₫</span></td><td><span class="badge b-su"><svg class="i"><use href="#i-check"/></svg>Thành công</span></td></tr>
+                <tr><td class="mono code">TX-20261002-0C7D18</td><td class="num">02/10 14:30</td><td>Nạp tiền qua cổng nạp</td><td class="r"><span class="amt in">+10.000.000 ₫</span></td><td><span class="badge b-su"><svg class="i"><use href="#i-check"/></svg>Thành công</span></td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div class="mask" aria-hidden="true"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m1-t">
+      <div class="m-h"><svg class="i i16" style="color:var(--error)"><use href="#i-lock"/></svg><h3 id="m1-t">Khóa tài khoản</h3><svg class="i i16 x" aria-label="Đóng (Esc)"><use href="#i-close"/></svg></div>
+      <div class="m-b">
+        <div class="obj">
+          <span>Tài khoản</span><span class="mono">1234 5678 9012</span>
+          <span>Chủ tài khoản</span><span>NGUYEN VAN AN</span>
+          <span>Số dư khả dụng</span><span class="num">46.250.000 ₫</span>
+        </div>
+        <span class="flabel" id="lv1">Mức khóa<span class="req">*</span></span>
+        <div class="radios" role="radiogroup" aria-labelledby="lv1">
+          <div class="radio on" role="radio" aria-checked="true"><span class="rd"></span><span><b>Khóa ghi Nợ</b><small>Không chuyển/rút đi, vẫn nhận tiền đến</small></span></div>
+          <div class="radio" role="radio" aria-checked="false"><span class="rd"></span><span><b>Khóa toàn bộ</b><small>Không chuyển/rút đi, không nhận tiền đến</small></span></div>
+        </div>
+        <div class="ba" aria-label="Thay đổi trạng thái">
+          <span class="k">Trạng thái</span>
+          <span class="tag st-active"><svg class="i"><use href="#i-check"/></svg>Hoạt động</span>
+          <svg class="i i16 arrow"><use href="#i-arrow"/></svg>
+          <span class="tag st-debit"><svg class="i"><use href="#i-lock"/></svg>Khóa ghi Nợ</span>
+        </div>
+        <label class="flabel" for="r1">Lý do<span class="req">*</span></label>
+        <div class="ta focus" id="r1" role="textbox" aria-multiline="true" aria-required="true" aria-describedby="r1-h">KH báo<span class="caret"></span></div>
+        <div class="ta-foot" id="r1-h"><span>Tối thiểu 10 ký tự. Cần thêm 4 ký tự. Lý do được ghi vào audit log.</span><span class="num">6 / 10 tối thiểu</span></div>
+      </div>
+      <div class="m-f">
+        <button class="btn" type="button">Hủy</button>
+        <button class="btn" type="button" disabled aria-disabled="true"><svg class="i"><use href="#i-lock"/></svg>Khóa ghi Nợ</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note"><b>Bổ sung (ngoài EXPERIENCE.md):</b> tag trạng thái <i>tài khoản</i> (khác badge giao dịch): Hoạt động = token succeeded; Khóa ghi Nợ = chữ <code>warning</code> trên nền <code>status-unknown-bg</code>, viền liền + icon khóa (viền liền để không nhầm với unknown); Khóa toàn bộ = token failed. Nút mở dialog dạng viền <code>error</code> (danger ghost) — không phải nút chính. Bộ đếm "6 / 10 tối thiểu" thay cho counter max-length mặc định của AntD.</div>
+
+<!-- ============ SECTION 2 — dialog enabled ============ -->
+<div class="sec">
+  <h1>2. Dialog — lý do đủ, nút xác nhận bật</h1>
+  <p>Lý do 76 ký tự ≥ 10 → nút "Khóa ghi Nợ" (màu <code>error</code>) bật. Esc hoặc "Hủy" đóng, không gửi.</p>
+</div>
+<div class="stage">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m2-t">
+    <div class="m-h"><svg class="i i16" style="color:var(--error)"><use href="#i-lock"/></svg><h3 id="m2-t">Khóa tài khoản</h3><svg class="i i16 x"><use href="#i-close"/></svg></div>
+    <div class="m-b">
+      <div class="obj">
+        <span>Tài khoản</span><span class="mono">1234 5678 9012</span>
+        <span>Chủ tài khoản</span><span>NGUYEN VAN AN</span>
+        <span>Số dư khả dụng</span><span class="num">46.250.000 ₫</span>
+      </div>
+      <span class="flabel">Mức khóa<span class="req">*</span></span>
+      <div class="radios" role="radiogroup">
+        <div class="radio on" role="radio" aria-checked="true"><span class="rd"></span><span><b>Khóa ghi Nợ</b><small>Không chuyển/rút đi, vẫn nhận tiền đến</small></span></div>
+        <div class="radio" role="radio" aria-checked="false"><span class="rd"></span><span><b>Khóa toàn bộ</b><small>Không chuyển/rút đi, không nhận tiền đến</small></span></div>
+      </div>
+      <div class="ba">
+        <span class="k">Trạng thái</span>
+        <span class="tag st-active"><svg class="i"><use href="#i-check"/></svg>Hoạt động</span>
+        <svg class="i i16 arrow"><use href="#i-arrow"/></svg>
+        <span class="tag st-debit"><svg class="i"><use href="#i-lock"/></svg>Khóa ghi Nợ</span>
+      </div>
+      <label class="flabel">Lý do<span class="req">*</span></label>
+      <div class="ta">KH báo mất điện thoại qua tổng đài lúc 10:05, yêu cầu tạm dừng giao dịch đi.</div>
+      <div class="ta-foot"><span class="ok"><svg class="i"><use href="#i-check"/></svg> Đủ độ dài. Lý do được ghi vào audit log.</span><span class="num">76 ký tự</span></div>
+    </div>
+    <div class="m-f">
+      <button class="btn" type="button">Hủy</button>
+      <button class="btn danger focus" type="button"><svg class="i"><use href="#i-lock"/></svg>Khóa ghi Nợ</button>
+    </div>
+  </div>
+</div>
+<div class="note"><b>Bổ sung:</b> dòng xác nhận "Đủ độ dài" (màu <code>success</code> + icon) khi đạt ngưỡng. R2: nút xác nhận đổi thành "Gửi yêu cầu duyệt" và trạng thái chuyển sang chờ KSV duyệt (theo KF-4).</div>
+
+<!-- ============ SECTION 3 — success ============ -->
+<div class="sec">
+  <h1>3. Sau xác nhận — banner thành công, tag trạng thái cập nhật</h1>
+  <p>KF-4 bước 3 (climax): trạng thái đổi sang Khóa ghi Nợ; banner thông báo qua <code>aria-live="polite"</code>; focus trả về nút "Khóa tài khoản".</p>
+</div>
+<div class="frame">
+  <div class="chrome">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="url"><svg class="i"><use href="#i-lock"/></svg><span>https://<b>admin.banking-go.vn</b>/accounts/123456789012</span></div>
+  </div>
+  <div class="app short">
+    <aside class="sider">
+      <div class="logo"><span class="mk">BG</span><span>banking-go<small>Quản trị vận hành</small></span></div>
+      <ul class="menu">
+        <li><svg class="i"><use href="#i-home"/></svg>Tổng quan vận hành</li>
+        <li><svg class="i"><use href="#i-users"/></svg>Khách hàng</li>
+        <li class="on"><svg class="i"><use href="#i-wallet"/></svg>Tài khoản</li>
+        <li><svg class="i"><use href="#i-swap"/></svg>Giao dịch<span class="cnt">3</span></li>
+        <li><svg class="i"><use href="#i-id"/></svg>Hàng chờ eKYC</li>
+      </ul>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <nav class="crumb"><span>Khách hàng</span><span>/</span><span>NGUYEN VAN AN</span><span>/</span><b>Tài khoản <span class="mono">1234 5678 9012</span></b></nav>
+        <div class="tools">
+          <div class="seg"><span class="on">VI</span><span>EN</span></div>
+          <span class="icon-btn"><svg class="i i16"><use href="#i-moon"/></svg></span>
+          <div class="user"><span class="ava">C</span><span>Chi <small>· Giao dịch viên</small></span></div>
+        </div>
+      </header>
+      <main class="content">
+        <div class="alert al-su" role="status" aria-live="polite">
+          <svg class="i"><use href="#i-check"/></svg>
+          <div><b>Đã khóa ghi Nợ. Tài khoản vẫn nhận tiền đến.</b><small>Chi (Giao dịch viên) · 05/10/2026 10:46 · lý do đã ghi vào audit log</small></div>
+          <svg class="i x" aria-label="Đóng thông báo"><use href="#i-close"/></svg>
+        </div>
+        <div class="ph">
+          <div>
+            <h2>NGUYEN VAN AN <span class="tag st-debit"><svg class="i"><use href="#i-lock"/></svg>Khóa ghi Nợ</span></h2>
+            <div class="meta"><span class="mono" style="color:var(--text)">1234 5678 9012</span><svg class="i copy"><use href="#i-copy"/></svg><span>· Tài khoản thanh toán · VND</span></div>
+          </div>
+          <button class="btn danger-ghost focus" type="button" style="outline-color:var(--primary)"><svg class="i"><use href="#i-lock"/></svg>Khóa tài khoản</button>
+        </div>
+        <div class="cards">
+          <div class="acard"><div class="lbl">Số dư khả dụng</div><div class="hero">46.250.000 ₫</div><div class="hint">Không chuyển/rút đi khi đang khóa ghi Nợ</div></div>
+          <div class="acard"><div class="lbl">Số dư sổ sách</div><div class="hero">48.750.000 ₫</div><div class="hint">Cập nhật 05/10/2026 10:46</div></div>
+          <div class="acard"><div class="lbl">Tạm giữ</div><div class="hero">2.500.000 ₫</div><div class="hint">1 giao dịch chưa rõ kết quả</div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+<div class="note"><b>Bổ sung:</b> dòng phụ trong banner (người thực hiện · giờ · audit log); gợi ý dưới "Số dư khả dụng" nhắc hiệu lực khóa. Nút "Khóa tài khoản" vẫn hiện để nâng lên Khóa toàn bộ; mở khóa chưa được đặc tả trong spine nên không vẽ.</div>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Claude Code (cá nhân / khóa tạm)
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/foundation.unlock
+.claude/sprint.autopilot
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# BMAD scripts cache
+_bmad/**/__pycache__/
