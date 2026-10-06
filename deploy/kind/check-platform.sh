@@ -29,3 +29,29 @@ code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 https://probe.kind.
 [[ $code == 404 ]] || fail "Traefik on :443 answered $code for an unknown host (want 404)"; ok "Traefik serves *.kind.localhost with the kind CA"
 [[ -s ${BG_CONFIG_DIR:-$HOME/.config/banking-go}/sealed-secrets-key.yaml ]] || fail "Sealed Secrets key not backed up"
 ok "Sealed Secrets key backed up"
+
+# --- waves -18/-15/-14: secrets + data
+"$ROOT/scripts/check-no-plain-secrets.sh"
+[[ $(kubectl -n banking-data get cluster.postgresql.cnpg.io pg -o jsonpath='{.status.phase}') == "Cluster in healthy state" ]] \
+  || fail "CNPG cluster banking-data/pg not healthy"
+psqlq() { kubectl -n banking-data exec pg-1 -c postgres -- psql -U postgres -tAc "$1"; }
+roles=$(psqlq "select string_agg(rolname, ',' order by rolname) from pg_roles where rolname ~ '^(core|public|admin)_(migrator|app)\$'")
+[[ $roles == admin_app,admin_migrator,core_app,core_migrator,public_app,public_migrator ]] || fail "pg roles: $roles"
+dbs=$(psqlq "select string_agg(datname || ':' || pg_get_userbyid(datdba), ',' order by datname) from pg_database where datname in ('core','public','admin')")
+[[ $dbs == admin:admin_migrator,core:core_migrator,public:public_migrator ]] || fail "pg databases: $dbs"
+ok "postgres pg: databases + 6 managed roles"
+rmqctl() { kubectl -n banking-data exec rmq-server-0 -c rabbitmq -- rabbitmqctl --quiet --no-table-headers "$@"; }
+ex=$(rmqctl list_exchanges --vhost banking name type)
+for e in $'banking.events\ttopic' $'banking.commands\tdirect' $'banking.dlx\tdirect' \
+         $'banking.retry.1\tfanout' $'banking.retry.2\tfanout' $'banking.retry.3\tfanout'; do
+  grep -qxF "$e" <<<"$ex" || fail "exchange missing: ${e//$'\t'/ }"
+done
+q=$(rmqctl list_queues --vhost banking name arguments)
+grep -E '^banking\.retry\.1[[:space:]].*x-message-ttl.*10000' <<<"$q" >/dev/null || fail "banking.retry.1 TTL 10s missing"
+users=$(rmqctl list_users)
+for u in core public-api admin-api; do grep -q "^$u[[:space:]]" <<<"$users" || fail "rabbitmq user $u missing"; done
+ok "rabbitmq rmq: exchanges, retry queues, users"
+pod=$(kubectl -n banking-data get pods -l app.kubernetes.io/name=seaweedfs -o name | head -1)
+kubectl -n banking-data exec "$pod" -- sh -c 'echo s3.bucket.list | weed shell' 2>/dev/null | grep -q banking-kind \
+  || fail "SeaweedFS bucket banking-kind missing"
+ok "seaweedfs bucket banking-kind"
