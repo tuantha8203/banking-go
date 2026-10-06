@@ -5,12 +5,12 @@
     {
       "id": "S1",
       "goal": "Image + chart chạy trên kind (cài bằng helm trực tiếp, chưa cần GitHub)",
-      "status": "active"
+      "status": "done"
     },
     {
       "id": "S2",
       "goal": "Observability as code trên kind: trace + RED + alert + dashboard + Telegram + runbook",
-      "status": "planned"
+      "status": "active"
     },
     {
       "id": "S3",
@@ -138,6 +138,16 @@
       "evidence": "make kind-smoke → 4 host ok (api/admin-api /v1/ping 200 {\"status\":\"ok\"}, app/admin 200 HTML), 3 job Completed (core/public-api/admin-api-migrate), \"skip digest check: deploy/releases/kind.yaml not found\", \"kind-smoke: all checks passed\", exit 0. Fail thật: scale deploy/public-api=0 → \"FAIL: https://api.kind.localhost/v1/ping → 503 no available server\", exit 2; scale lại 1 → pass. RELEASES_FILE digest giả → \"FAIL: core runs …@sha256:134cb32…, want @sha256:deadbeef\". make lint exit 0."
     },
     {
+      "id": "T22",
+      "sprint": "S2",
+      "name": "Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`)",
+      "dependencies": [
+        "T12"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
       "id": "T13",
       "sprint": "S2",
       "name": "kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry",
@@ -184,16 +194,6 @@
       "name": "Runbook + `make kind-watch`",
       "dependencies": [
         "T14"
-      ],
-      "status": "not-started",
-      "evidence": ""
-    },
-    {
-      "id": "T22",
-      "sprint": "S2",
-      "name": "Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`)",
-      "dependencies": [
-        "T12"
       ],
       "status": "not-started",
       "evidence": ""

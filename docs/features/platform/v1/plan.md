@@ -80,12 +80,12 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
 Sprint S2 — "Observability as code trên kind"
+- [ ] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`) — làm trước T13 (owner duyệt)
 - [ ] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
 - [ ] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
 - [ ] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
 - [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
 - [ ] T17: Runbook + `make kind-watch`
-- [ ] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`)
 
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
 - [ ] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
