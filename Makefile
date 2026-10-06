@@ -247,6 +247,9 @@ obs-gen-check: obs-gen ## Fail if generated observability objects differ from th
 .PHONY: dashboards-test
 dashboards-test: ## Validate observability/dashboards/*.json (uids, datasources, required panels)
 	scripts/test-dashboards.sh
+.PHONY: alertmanager-test
+alertmanager-test: tools-k8s ## amtool check + routing test of observability/alertmanager/kind.yaml
+	scripts/test-alertmanager.sh
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run

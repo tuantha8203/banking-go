@@ -81,4 +81,16 @@ for uid in bg-service-overview bg-platform; do
     | jq -e --arg u "$uid" '.dashboard.uid == $u' >/dev/null || fail "Grafana dashboard $uid missing"
   ok "Grafana dashboard $uid"
 done
+
+# 7. Watchdog reaches Telegram (spec criterion 5): Alertmanager reports successful telegram notifications
+active=$(svc_get monitoring kube-prometheus-stack-alertmanager:9093 '/api/v2/alerts?filter=alertname%3D%22Watchdog%22' | jq 'length')
+[[ $active -ge 1 ]] || fail "Watchdog not active in Alertmanager"
+sent=0
+for _ in $(seq 24); do
+  sent=$(prom_value 'sum(alertmanager_notifications_total{integration="telegram"})')
+  awk -v v="$sent" 'BEGIN{exit !(v > 0)}' && break; sleep 5
+done
+failed=$(prom_value 'sum(alertmanager_notifications_failed_total{integration="telegram"})')
+awk -v s="$sent" -v f="$failed" 'BEGIN{exit !(s > 0 && f == 0)}' || fail "telegram notifications sent=$sent failed=$failed"
+ok "Alertmanager delivered $sent telegram notification(s), 0 failed"
 echo "kind-smoke: all checks passed"
