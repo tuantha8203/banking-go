@@ -1,0 +1,25 @@
+# web-admin: back-office SPA on nginx-unprivileged (AD-14); config.js is mounted from configFiles.
+global:
+  ghOwner: ""
+  imagePullSecrets: []
+  otelEndpoint: ""
+  gateway: {name: traefik-gateway, namespace: traefik, sectionName: websecure}
+image:
+  repository: "ghcr.io/{{ .Values.global.ghOwner }}/banking-go/web-admin"
+  digest: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+command: []
+ports: {app: 8080, admin: null}
+replicas: 2
+resources:
+  requests: {cpu: 10m, memory: 16Mi}
+  limits: {memory: 64Mi}
+env: {}
+envFromSecrets: []
+configFiles: {}
+secretsRevision: "0"
+route: {enabled: true, host: "", pathPrefix: /}
+migration: {enabled: false, dsnSecret: ""}
+mtls: {enabled: false}
+shutdownTimeoutSeconds: 10

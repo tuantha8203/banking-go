@@ -83,8 +83,8 @@
         "T6",
         "T4"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make helm-test → _libtest 25 passed, core-worker 2 passed, public-api 3 passed, web-customer 3 passed (exit 0); make helm-lint → 10× \"1 chart(s) linted, 0 chart(s) failed\" + kubeconform k8s 1.36 + CRD catalog Valid 3–5/Invalid 0/Errors 0/Skipped 0 mỗi chart (exit 0); make lint exit 0; ./init.sh Baseline OK. Lệch plan: (1) test plan có path [0] không quote trong flow mapping (YAML lỗi) → quote; (2) test chỉ set image.tag bị guard ghOwner của lib (T5) chặn → thêm global.ghOwner: acme vào set (owner duyệt), không đổi assertion; (3) Makefile helm-deps/lint/test thêm `|| exit 1` để fail-fast (giữ hành vi T5)."
     },
     {
       "id": "T8",

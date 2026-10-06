@@ -72,7 +72,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 - [x] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 - [x] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
-- [ ] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
+- [x] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
 - [ ] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
 - [ ] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
 - [ ] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
@@ -2153,7 +2153,7 @@ git commit -m "feat(platform): lib chart httproute, pdb, presync migration job, 
 - Consumes: `lib.all` + values interface (T5, T6); `deploy/deployables.tsv` (T3); command/port của image (T3, T4).
 - Produces: 10 chart `deploy/helm/<deployable>` (tên chart = tên deployable = khóa trong `deploy/releases/kind.yaml`); Secret tên cố định mà T10 phải tạo: `core-migrator-dsn`, `public-api-migrator-dsn`, `admin-api-migrator-dsn` (key `dsn`), `core-env`, `core-worker-env`, `public-api-env`, `admin-api-env` (namespace `banking`); host `api.kind.localhost` (public-api), `admin-api.kind.localhost` (admin-api), `app.kind.localhost` (web-customer), `admin.kind.localhost` (web-admin); target `make helm-lint`, `make helm-test`, `make helm-deps`.
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 `deploy/helm/public-api/tests/public-api_test.yaml`:
 ```yaml
@@ -2255,7 +2255,7 @@ tests:
 Run: `make helm-test`
 Expected: FAIL — `Chart.yaml file is missing` cho `deploy/helm/public-api`.
 
-- [ ] **Step 2: Tạo Chart.yaml + templates cho 10 chart** (sinh từ `deploy/deployables.tsv`)
+- [x] **Step 2: Tạo Chart.yaml + templates cho 10 chart** (sinh từ `deploy/deployables.tsv`)
 
 ```bash
 while read -r name _rest; do
@@ -2277,7 +2277,7 @@ EOF
 done < deploy/deployables.tsv
 ```
 
-- [ ] **Step 3: `values.yaml` (giá trị chung mọi env)**
+- [x] **Step 3: `values.yaml` (giá trị chung mọi env)**
 
 `deploy/helm/core/values.yaml`:
 ```yaml
@@ -2569,7 +2569,7 @@ mtls: {enabled: false}
 shutdownTimeoutSeconds: 10
 ```
 
-- [ ] **Step 4: `values-kind.yaml`** (digest đến từ `deploy/releases/kind.yaml` qua Argo CD; S1/S2 dùng `image.tag=local` do `kind-apps` truyền)
+- [x] **Step 4: `values-kind.yaml`** (digest đến từ `deploy/releases/kind.yaml` qua Argo CD; S1/S2 dùng `image.tag=local` do `kind-apps` truyền)
 
 `deploy/helm/core/values-kind.yaml`:
 ```yaml
@@ -2668,7 +2668,7 @@ configFiles:
       window.__BG_CONFIG__ = { apiBaseUrl: 'https://admin-api.kind.localhost', env: 'kind', release: 'kind' }
 ```
 
-- [ ] **Step 5: `Makefile`** — thay khối `helm-test` của T5 bằng:
+- [x] **Step 5: `Makefile`** — thay khối `helm-test` của T5 bằng:
 
 ```make
 HELM_CHARTS := $(sort $(filter-out deploy/helm/_%,$(wildcard deploy/helm/*)))
@@ -2691,12 +2691,12 @@ helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with test
 	done
 ```
 
-- [ ] **Step 6: Chạy lint + test**
+- [x] **Step 6: Chạy lint + test**
 
 Run: `make helm-lint helm-test`
 Expected: mỗi chart `1 chart(s) linted, 0 chart(s) failed` và kubeconform `Summary: N resources found … Valid: N, Invalid: 0, Errors: 0`; helm-unittest 4 chart pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add deploy/helm Makefile

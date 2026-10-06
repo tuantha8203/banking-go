@@ -1,0 +1,25 @@
+# core: gRPC (AD-1). Values interface: spec platform v1 "Thiết kế"; templates: deploy/helm/_lib.
+global:
+  ghOwner: ""
+  imagePullSecrets: []
+  otelEndpoint: ""
+  gateway: {name: traefik-gateway, namespace: traefik, sectionName: websecure}
+image:
+  repository: "ghcr.io/{{ .Values.global.ghOwner }}/banking-go/core"
+  digest: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+command: ["/usr/local/bin/core"]
+ports: {app: 8090, admin: 9190}
+replicas: 2
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {memory: 256Mi}
+env: {}
+envFromSecrets: []
+configFiles: {}
+secretsRevision: "0"
+route: {enabled: false, host: "", pathPrefix: /}
+migration: {enabled: true, dsnSecret: core-migrator-dsn}
+mtls: {enabled: false}
+shutdownTimeoutSeconds: 30

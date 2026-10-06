@@ -169,10 +169,23 @@ image-smoke: ## Run every local image and probe it (make images first)
 
 # ---------------------------------------------------------------------------------------------
 # Helm (platform v1): deploy/helm/_lib is the only place with Kubernetes templates.
-.PHONY: helm-test
-helm-test: tools-k8s ## helm-unittest: lib fixture chart + every chart with tests/
-	@for c in deploy/helm/_libtest $(filter-out deploy/helm/_%,$(wildcard deploy/helm/*)); do \
-		if [ -d $$c/tests ]; then echo "== $$c"; { $(HELM) dependency build $$c >/dev/null && $(HELM) unittest $$c; } || exit 1; fi; \
+HELM_CHARTS := $(sort $(filter-out deploy/helm/_%,$(wildcard deploy/helm/*)))
+KUBECONFORM_FLAGS := -strict -summary -kubernetes-version 1.36.0 -schema-location default \
+	-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
+.PHONY: helm-deps helm-lint helm-test
+helm-deps: tools-k8s
+	@for c in deploy/helm/_libtest $(HELM_CHARTS); do $(HELM) dependency build $$c >/dev/null || exit 1; done
+helm-lint: helm-deps ## helm lint --strict + kubeconform (k8s 1.36 + CRD catalog) of every chart with values-kind.yaml
+	@for c in $(HELM_CHARTS); do \
+		n=$$(basename $$c); echo "== $$n"; \
+		$(HELM) lint --strict $$c -f $$c/values-kind.yaml --set global.ghOwner=lint-owner --set image.tag=lint || exit 1; \
+		$(HELM) template $$n $$c -n banking -f $$c/values-kind.yaml --set global.ghOwner=lint-owner --set image.tag=lint \
+			| $(KUBECONFORM) $(KUBECONFORM_FLAGS) || exit 1; \
+	done
+helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with tests/
+	@for c in deploy/helm/_libtest $(HELM_CHARTS); do \
+		if [ -d $$c/tests ]; then echo "== $$c"; $(HELM) unittest $$c || exit 1; fi; \
 	done
 
 # ---------------------------------------------------------------------------------------------
