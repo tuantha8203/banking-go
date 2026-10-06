@@ -214,6 +214,13 @@ kind-ca: tools-k8s ## Export the kind root CA to ~/.config/banking-go/kind-ca.cr
 seal: tools-k8s ## Seal kind secrets from deploy/secrets/kind.env (git-ignored) into deploy/secrets/kind/*.sealed.yaml
 	scripts/seal-kind.sh
 
+.PHONY: kind-load kind-apps
+kind-load: tools-k8s ## Load the locally built images ($(IMAGE_PREFIX)/<image>:$(IMAGE_TAG)) into the kind nodes
+	@for i in $(IMAGES); do $(KIND) load docker-image $(IMAGE_PREFIX)/$$i:$(IMAGE_TAG) --name $(KIND_CLUSTER) || exit 1; done
+kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.yaml + local images (before GitOps)
+	IMAGE_PREFIX=$(IMAGE_PREFIX) IMAGE_TAG=$(IMAGE_TAG) scripts/kind-apps.sh
+	deploy/kind/check-apps.sh
+
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy

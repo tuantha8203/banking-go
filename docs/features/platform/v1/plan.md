@@ -76,7 +76,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
 - [x] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
 - [x] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
-- [ ] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
+- [x] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
 - [ ] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
 Sprint S2 — "Observability as code trên kind"
@@ -3854,7 +3854,7 @@ git commit -m "feat(platform): kind data wave (cnpg, rabbitmq topology, seaweedf
 - Consumes: image `banking-go/<image>:local` + `IMAGES` (T3, T4), 10 chart (T7), `deploy/deployables.tsv` (T3), Secret + data (T10), `require_kind_context` (T8).
 - Produces: release Helm `<deployable>` trong ns `banking` (image `banking-go/<image>:local`, `pullPolicy: Never`); Job `core-migrate`, `public-api-migrate`, `admin-api-migrate` Completed; target `make kind-load`, `make kind-apps`; `deploy/kind/check-apps.sh`.
 
-- [ ] **Step 1: Viết check thất bại** — `deploy/kind/check-apps.sh`
+- [x] **Step 1: Viết check thất bại** — `deploy/kind/check-apps.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -3880,7 +3880,7 @@ done
 Run: `chmod +x deploy/kind/check-apps.sh && deploy/kind/check-apps.sh`
 Expected: `FAIL: deployment banking/core not available`.
 
-- [ ] **Step 2: `scripts/kind-apps.sh`**
+- [x] **Step 2: `scripts/kind-apps.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -3908,7 +3908,7 @@ done 3< "$ROOT/deploy/deployables.tsv"
 echo "kind-apps: done"
 ```
 
-- [ ] **Step 3: `Makefile`** — thêm vào khối kind:
+- [x] **Step 3: `Makefile`** — thêm vào khối kind:
 
 ```make
 .PHONY: kind-load kind-apps
@@ -3919,17 +3919,17 @@ kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.ya
 	deploy/kind/check-apps.sh
 ```
 
-- [ ] **Step 4: Chạy**
+- [x] **Step 4: Chạy**
 
 Run: `chmod +x scripts/kind-apps.sh && make images kind-load kind-apps`
 Expected: 10 dòng `== <deployable> …`, `kind-apps: done`, check: 10 `ok   deployment …`, 3 `ok   job …-migrate Completed`.
 
-- [ ] **Step 5: Chạy lại an toàn (migration re-run)**
+- [x] **Step 5: Chạy lại an toàn (migration re-run)**
 
 Run: `make kind-apps && kubectl -n banking get jobs`
 Expected: exit 0; 3 Job `COMPLETIONS 1/1` (Job được tạo lại mỗi lần upgrade, vẫn no-op).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/kind-apps.sh deploy/kind/check-apps.sh Makefile

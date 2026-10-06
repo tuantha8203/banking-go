@@ -124,8 +124,8 @@
         "T7",
         "T10"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make images kind-load kind-apps → exit 0: 10 \"== <deployable>\" (helm REVISION 1), \"kind-apps: done\", check-apps: 10 \"ok deployment\", 3 \"ok job {core,public-api,admin-api}-migrate Completed\". Re-run make kind-apps → exit 0, 10× REVISION 2, kubectl get jobs: 3 Complete 1/1, log \"migrate: no migrations, nothing to do\". make lint exit 0."
     },
     {
       "id": "T12",
