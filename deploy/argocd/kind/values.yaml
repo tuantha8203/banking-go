@@ -1,0 +1,47 @@
+# Single source of truth for the kind env (ADR 0011): add-ons with chart/version/values/sync-wave.
+# Read by scripts/kind-platform.sh (helm/kubectl, S1–S2, before GitOps) and by the app-of-apps templates (T21).
+# Fields: chart {repo,name,version} + values[] (+ releaseName) OR path (directory of manifests);
+#         wait = `kubectl wait` arguments; post = command run by the script after install (Argo CD ignores it).
+repoURL: ""          # git@github.com:<GH_OWNER>/banking-go.git, set by deploy/kind/bootstrap.sh (T21)
+targetRevision: main
+ghOwner: ""
+addons:
+  - name: gateway-api-crds
+    wave: -30
+    path: deploy/platform/gateway-api
+    wait: "--for=condition=Established crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=120s"
+  - name: cert-manager
+    wave: -20
+    namespace: cert-manager
+    chart: {repo: https://charts.jetstack.io, name: cert-manager, version: v1.21.2}
+    values: [deploy/platform/cert-manager/values-kind.yaml]
+  - name: sealed-secrets
+    wave: -20
+    namespace: kube-system
+    chart: {repo: https://bitnami.github.io/sealed-secrets, name: sealed-secrets, version: 2.20.0}
+    values: [deploy/platform/sealed-secrets/values-kind.yaml]
+    post: deploy/kind/sealed-key.sh backup
+  - name: traefik
+    wave: -20
+    namespace: traefik
+    chart: {repo: https://traefik.github.io/charts, name: traefik, version: 41.6.1}
+    values: [deploy/platform/traefik/values-kind.yaml]
+  - name: cloudnative-pg
+    wave: -20
+    namespace: cnpg-system
+    chart: {repo: https://cloudnative-pg.github.io/charts, name: cloudnative-pg, version: 0.29.1}
+    values: [deploy/platform/cloudnative-pg/values-kind.yaml]
+  - name: rabbitmq-cluster-operator
+    wave: -19
+    namespace: rabbitmq-system
+    path: deploy/platform/rabbitmq-operators/cluster-operator
+    wait: "-n rabbitmq-system --for=condition=Available deploy/rabbitmq-cluster-operator --timeout=300s"
+  - name: rabbitmq-topology-operator
+    wave: -19
+    namespace: rabbitmq-system
+    path: deploy/platform/rabbitmq-operators/topology-operator
+    wait: "-n rabbitmq-system --for=condition=Available deploy/messaging-topology-operator --timeout=300s"
+  - name: cluster-issuers
+    wave: -18
+    path: deploy/platform/cert-manager-issuers/kind
+    wait: "--for=condition=Ready clusterissuer/kind-ca clusterissuer/bg-internal-ca --timeout=180s"

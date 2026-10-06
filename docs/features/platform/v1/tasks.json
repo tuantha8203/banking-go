@@ -103,8 +103,8 @@
       "dependencies": [
         "T8"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "deploy/kind/check-platform.sh trước implement → \"FAIL: Gateway API CRDs bundle-version= (want v1.6.2)\", exit 1 (RED). scripts/vendor-manifests.sh → 3 \"vendored\", --check → 3 \"ok\" (sha256 khớp vendor.lock). make kind-platform lần 1 → sealed-secrets-controller ImagePullBackOff do Docker Hub 429 (pull ẩn danh trong node kind qua IP proxy dùng chung) → helm timeout, exit 2; xử lý tay: docker pull trên host + docker save --platform linux/amd64 + kind load image-archive cho bitnami/sealed-secrets-controller:0.40.0 và traefik:v3.7.13 (kind load docker-image lỗi digest multi-arch). make kind-platform lần 2 → wave -30…-18, \"kind-platform: done\", check 13 dòng ok (CRD v1.6.2, 6 deployment, 3 ClusterIssuer, Gateway Programmed, TLS :443 do kind CA + 404, key backup), exit 0 (1m50s). make kind-ca → subject=CN = banking-go kind root CA. make kind-platform lần 3 (idempotent) → exit 0, 0 dòng conflict/error (12s). make lint → exit 0. Lệch plan: `|| true` ở dòng đọc bundle-version trong check (commit test). Chưa xử lý: 429 Docker Hub trong node kind làm make kind-platform từ cluster sạch có thể fail — đề xuất việc sprint sau."
     },
     {
       "id": "T10",

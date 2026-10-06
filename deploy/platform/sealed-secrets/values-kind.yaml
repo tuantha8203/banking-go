@@ -1,0 +1,6 @@
+# Sealed Secrets controller v0.40.0 (chart sealed-secrets 2.20.0, project repo — D-8 exception to AD-14).
+# Name + namespace match kubeseal defaults (kube-system/sealed-secrets-controller).
+fullnameOverride: sealed-secrets-controller
+resources:
+  requests: {cpu: 10m, memory: 32Mi}
+  limits: {memory: 128Mi}

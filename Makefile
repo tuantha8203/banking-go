@@ -201,6 +201,15 @@ kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the
 	-deploy/kind/sealed-key.sh backup
 	$(KIND) delete cluster --name $(KIND_CLUSTER)
 
+.PHONY: kind-platform kind-ca
+kind-platform: tools-k8s ## Install kind add-ons from deploy/argocd/kind/values.yaml with helm/kubectl (before GitOps; MAX_WAVE=N to stop early)
+	scripts/kind-platform.sh $(if $(MAX_WAVE),--max-wave $(MAX_WAVE))
+	deploy/kind/check-platform.sh
+kind-ca: tools-k8s ## Export the kind root CA to ~/.config/banking-go/kind-ca.crt (curl --cacert / trust store)
+	@mkdir -p $(HOME)/.config/banking-go
+	$(KUBECTL) -n cert-manager get secret kind-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(HOME)/.config/banking-go/kind-ca.crt
+	@echo "CA: $(HOME)/.config/banking-go/kind-ca.crt — e.g. curl --cacert $(HOME)/.config/banking-go/kind-ca.crt https://api.kind.localhost/v1/ping"
+
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy

@@ -1,0 +1,62 @@
+# kind CAs (spec §8): self-signed CA for *.kind.localhost (Traefik TLS) + internal CA for service mTLS (AD-10).
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kind-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: banking-go kind root CA
+  secretName: kind-root-ca
+  duration: 87600h
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {group: cert-manager.io, kind: ClusterIssuer, name: selfsigned}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: kind-ca
+spec:
+  ca:
+    secretName: kind-root-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: bg-internal-root-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: banking-go internal mTLS CA (kind)
+  secretName: bg-internal-root-ca
+  duration: 87600h
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {group: cert-manager.io, kind: ClusterIssuer, name: selfsigned}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: bg-internal-ca
+spec:
+  ca:
+    secretName: bg-internal-root-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-kind-localhost
+  namespace: traefik
+spec:
+  secretName: wildcard-kind-localhost-tls
+  dnsNames: ["*.kind.localhost", "kind.localhost"]
+  duration: 2160h
+  renewBefore: 360h
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {group: cert-manager.io, kind: ClusterIssuer, name: kind-ca}

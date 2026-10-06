@@ -74,7 +74,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [x] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
 - [x] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
-- [ ] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
+- [x] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
 - [ ] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
 - [ ] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
 - [ ] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
@@ -2936,7 +2936,7 @@ git commit -m "feat(platform): kind 1.36 cluster bootstrap with Argo CD and seal
 - Consumes: cluster + `require_kind_context` (T8), `sealed-key.sh backup` (T8).
 - Produces: catalog `deploy/argocd/kind/values.yaml` với khóa `repoURL`, `targetRevision`, `ghOwner`, `addons[]` (`name`, `wave`, `namespace`, `chart.{repo,name,version}` + `values[]` + `releaseName` **hoặc** `path`; `wait` = đối số `kubectl wait`; `post` = lệnh chạy sau khi cài, chỉ script dùng); `scripts/kind-platform.sh [--max-wave N] [name…]`; Gateway `traefik/traefik-gateway` (listener `websecure`/`web`), ClusterIssuer `selfsigned`, `kind-ca`, `bg-internal-ca`; Secret TLS `traefik/wildcard-kind-localhost-tls`; controller `kube-system/sealed-secrets-controller`; CRD Gateway API v1.6.2, CNPG, RabbitMQ; target `make kind-platform`, `make kind-ca` (ghi `~/.config/banking-go/kind-ca.crt`).
 
-- [ ] **Step 1: Viết check thất bại** — `deploy/kind/check-platform.sh`
+- [x] **Step 1: Viết check thất bại** — `deploy/kind/check-platform.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -2975,7 +2975,7 @@ ok "Sealed Secrets key backed up"
 Run: `chmod +x deploy/kind/check-platform.sh && deploy/kind/check-platform.sh`
 Expected: `FAIL: Gateway API CRDs bundle-version= (want v1.6.2)` (CRD chưa có → lỗi NotFound).
 
-- [ ] **Step 2: Vendor manifest có khóa sha256**
+- [x] **Step 2: Vendor manifest có khóa sha256**
 
 `deploy/platform/vendor.lock`:
 ```text
@@ -3011,7 +3011,7 @@ exit $status
 Run: `chmod +x scripts/vendor-manifests.sh && scripts/vendor-manifests.sh && scripts/vendor-manifests.sh --check`
 Expected: 3 dòng `vendored …` rồi 3 dòng `ok   …`.
 
-- [ ] **Step 3: Values add-on**
+- [x] **Step 3: Values add-on**
 
 `deploy/platform/cert-manager/values-kind.yaml`:
 ```yaml
@@ -3164,7 +3164,7 @@ spec:
   issuerRef: {group: cert-manager.io, kind: ClusterIssuer, name: kind-ca}
 ```
 
-- [ ] **Step 4: Catalog** — `deploy/argocd/kind/values.yaml`
+- [x] **Step 4: Catalog** — `deploy/argocd/kind/values.yaml`
 
 ```yaml
 # Single source of truth for the kind env (ADR 0011): add-ons with chart/version/values/sync-wave.
@@ -3216,7 +3216,7 @@ addons:
     wait: "--for=condition=Ready clusterissuer/kind-ca clusterissuer/bg-internal-ca --timeout=180s"
 ```
 
-- [ ] **Step 5: `scripts/kind-platform.sh`**
+- [x] **Step 5: `scripts/kind-platform.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -3262,7 +3262,7 @@ done 3< <(yq -o=json -I=0 '.addons | sort_by(.wave) | .[]' "$CATALOG")
 echo "kind-platform: done"
 ```
 
-- [ ] **Step 6: `Makefile`** — thêm vào khối kind:
+- [x] **Step 6: `Makefile`** — thêm vào khối kind:
 
 ```make
 .PHONY: kind-platform kind-ca
@@ -3275,7 +3275,7 @@ kind-ca: tools-k8s ## Export the kind root CA to ~/.config/banking-go/kind-ca.cr
 	@echo "CA: $(HOME)/.config/banking-go/kind-ca.crt — e.g. curl --cacert $(HOME)/.config/banking-go/kind-ca.crt https://api.kind.localhost/v1/ping"
 ```
 
-- [ ] **Step 7: Cài + check**
+- [x] **Step 7: Cài + check**
 
 Run: `chmod +x scripts/kind-platform.sh && make kind-platform && make kind-ca && openssl x509 -in ~/.config/banking-go/kind-ca.crt -noout -subject`
 Expected: các dòng `== wave -30 … -18`, `kind-platform: done`, check in `ok …` cho mọi mục; `subject=CN = banking-go kind root CA`.
@@ -3283,7 +3283,7 @@ Expected: các dòng `== wave -30 … -18`, `kind-platform: done`, check in `ok 
 Run lần 2 (idempotent): `make kind-platform`
 Expected: exit 0, không lỗi conflict.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add deploy/argocd/kind/values.yaml deploy/platform scripts/kind-platform.sh scripts/vendor-manifests.sh deploy/kind/check-platform.sh Makefile

@@ -1,0 +1,39 @@
+# Traefik v3.7.13 (chart 41.6.1) as Gateway API v1.6 provider on kind: hostPort 80/443 on the ingress-ready control-plane.
+deployment:
+  replicas: 1
+nodeSelector:
+  ingress-ready: "true"
+tolerations:
+  - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
+service:
+  type: ClusterIP
+ports:
+  web:
+    hostPort: 80
+  websecure:
+    hostPort: 443
+providers:
+  kubernetesIngress:
+    enabled: false
+  kubernetesGateway:
+    enabled: true
+gateway:
+  name: traefik-gateway
+  listeners:
+    web:
+      port: 8000
+      protocol: HTTP
+      namespacePolicy:
+        from: All
+    websecure:
+      port: 8443
+      protocol: HTTPS
+      hostname: "*.kind.localhost"
+      namespacePolicy:
+        from: All
+      certificateRefs:
+        - name: wildcard-kind-localhost-tls
+      mode: Terminate
+resources:
+  requests: {cpu: 20m, memory: 64Mi}
+  limits: {memory: 256Mi}
