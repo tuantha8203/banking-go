@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "core",
+      "credentials": [{ "accessKey": "local-core", "secretKey": "local-core-secret" }],
+      "actions": ["Admin", "Read", "List", "Write", "Tagging"]
+    },
+    {
+      "name": "public-api",
+      "credentials": [{ "accessKey": "local-public-api", "secretKey": "local-public-api-secret" }],
+      "actions": ["Write:banking-local/kyc"]
+    }
+  ]
+}

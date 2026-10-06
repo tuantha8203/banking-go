@@ -1,0 +1,101 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GOTOOLCHAIN: local
+  GOLANGCI_LINT_VERSION: v2.14.0
+
+jobs:
+  go:
+    name: go (lint, test, generated code)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: |
+            **/go.sum
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          install-only: true
+      - name: golangci-lint (per module)
+        run: make lint-go
+      - name: go vet
+        run: make vet
+      - name: go test
+        run: go test -race $(printf './%s/... ' pkg services/core services/public-api services/admin-api services/mocks)
+      - name: Generated code is committed (protobuf + OpenAPI, AD-9)
+        run: make gen-check
+
+  web:
+    name: web (lint, typecheck, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # version from package.json "packageManager"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r lint
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+
+  proto:
+    name: proto (buf lint, breaking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: tools/go.sum
+      - name: buf lint
+        run: make lint-proto
+      - name: buf breaking against main
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || 'main' }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "push" ]; then
+            # On main itself compare with the previous commit.
+            git update-ref refs/remotes/origin/base HEAD~1 || { echo "no previous commit; skipping"; exit 0; }
+          else
+            git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/base"
+          fi
+          if ! git cat-file -e refs/remotes/origin/base:proto/buf.yaml 2>/dev/null; then
+            echo "base has no proto/ yet; skipping buf breaking"
+            exit 0
+          fi
+          cd tools && GOWORK=off go tool buf breaking ../proto --against '../.git#ref=refs/remotes/origin/base,subdir=proto'
+
+  secrets:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            zricethezav/gitleaks:v8.30.0 git /repo --redact --verbose --exit-code 1

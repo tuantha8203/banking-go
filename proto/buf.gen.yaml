@@ -1,0 +1,16 @@
+# Generates Go code into pkg/gen (module banking-go/pkg) so core and both edges share one copy.
+# Plugins are pinned in tools/go.mod and built into ../bin by `make tools` (run from proto/).
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: banking-go/pkg/gen
+plugins:
+  - local: ../bin/protoc-gen-go
+    out: ../pkg/gen
+    opt: paths=source_relative
+  - local: ../bin/protoc-gen-go-grpc
+    out: ../pkg/gen
+    opt: paths=source_relative
+clean: true

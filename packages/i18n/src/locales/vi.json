@@ -1,0 +1,8 @@
+{
+  "customer": {
+    "app": { "title": "Ngân hàng số banking-go" }
+  },
+  "admin": {
+    "app": { "title": "Quản trị banking-go" }
+  }
+}

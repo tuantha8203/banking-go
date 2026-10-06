@@ -1,0 +1,8 @@
+{
+  "customer": {
+    "app": { "title": "banking-go Digital Bank" }
+  },
+  "admin": {
+    "app": { "title": "banking-go Back Office" }
+  }
+}

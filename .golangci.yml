@@ -1,0 +1,295 @@
+# golangci-lint v2 config (pinned tool: golangci-lint v2.14, spine Stack).
+# Run per Go module from the repo root via `make lint` (golangci-lint looks up this file from the module dir).
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosec
+    - revive
+    - depguard
+    - ineffassign
+    - unused
+  settings:
+    revive:
+      # Light rule set; tighten later.
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          arguments: ["disableStutteringCheck"]
+        - name: increment-decrement
+        - name: var-naming
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: indent-error-flow
+        - name: errorf
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    gosec:
+      excludes:
+        - G104 # duplicate of errcheck
+    depguard:
+      # AD-3: inside services/core, module <a> may import internal/<b>/app only, never
+      # internal/<b>/domain or internal/<b>/adapters. depguard matches by file glob + import prefix, so
+      # the rule is spelled out per R1 module below; add a block when a module is added (pricing R2,
+      # recon R3, savings R4). A stricter custom analyzer (generic <a>/<b> check, SQL schema check) comes later.
+      rules:
+        # Shared libraries never depend on deployables.
+        pkg-no-services:
+          files:
+            - "**/pkg/**"
+          deny:
+            - pkg: "banking-go/services"
+              desc: "pkg/ is shared library code and must not import a service (AD-1)"
+        # Mocks are external partners: no service imports them, they import no service (AD-12).
+        no-mocks-in-services:
+          files:
+            - "**/services/core/**"
+            - "**/services/public-api/**"
+            - "**/services/admin-api/**"
+          deny:
+            - pkg: "banking-go/services/mocks"
+              desc: "partners are external even when mocked (AD-12)"
+        mocks-no-services:
+          files:
+            - "**/services/mocks/**"
+          deny:
+            - pkg: "banking-go/services/core"
+              desc: "mocks must not import core (AD-12)"
+            - pkg: "banking-go/services/public-api"
+              desc: "mocks must not import edge services (AD-12)"
+            - pkg: "banking-go/services/admin-api"
+              desc: "mocks must not import edge services (AD-12)"
+        core-customer-boundaries:
+          files:
+            - "**/services/core/internal/customer/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/account/domain"
+              desc: "AD-3: import account/app only, never account/domain"
+            - pkg: "banking-go/services/core/internal/account/adapters"
+              desc: "AD-3: import account/app only, never account/adapters"
+            - pkg: "banking-go/services/core/internal/ledger/domain"
+              desc: "AD-3: import ledger/app only, never ledger/domain"
+            - pkg: "banking-go/services/core/internal/ledger/adapters"
+              desc: "AD-3: import ledger/app only, never ledger/adapters"
+            - pkg: "banking-go/services/core/internal/payment/domain"
+              desc: "AD-3: import payment/app only, never payment/domain"
+            - pkg: "banking-go/services/core/internal/payment/adapters"
+              desc: "AD-3: import payment/app only, never payment/adapters"
+            - pkg: "banking-go/services/core/internal/eod/domain"
+              desc: "AD-3: import eod/app only, never eod/domain"
+            - pkg: "banking-go/services/core/internal/eod/adapters"
+              desc: "AD-3: import eod/app only, never eod/adapters"
+            - pkg: "banking-go/services/core/internal/audit/domain"
+              desc: "AD-3: import audit/app only, never audit/domain"
+            - pkg: "banking-go/services/core/internal/audit/adapters"
+              desc: "AD-3: import audit/app only, never audit/adapters"
+            - pkg: "banking-go/services/core/internal/platform/domain"
+              desc: "AD-3: import platform/app only, never platform/domain"
+            - pkg: "banking-go/services/core/internal/platform/adapters"
+              desc: "AD-3: import platform/app only, never platform/adapters"
+        core-account-boundaries:
+          files:
+            - "**/services/core/internal/account/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/customer/domain"
+              desc: "AD-3: import customer/app only, never customer/domain"
+            - pkg: "banking-go/services/core/internal/customer/adapters"
+              desc: "AD-3: import customer/app only, never customer/adapters"
+            - pkg: "banking-go/services/core/internal/ledger/domain"
+              desc: "AD-3: import ledger/app only, never ledger/domain"
+            - pkg: "banking-go/services/core/internal/ledger/adapters"
+              desc: "AD-3: import ledger/app only, never ledger/adapters"
+            - pkg: "banking-go/services/core/internal/payment/domain"
+              desc: "AD-3: import payment/app only, never payment/domain"
+            - pkg: "banking-go/services/core/internal/payment/adapters"
+              desc: "AD-3: import payment/app only, never payment/adapters"
+            - pkg: "banking-go/services/core/internal/eod/domain"
+              desc: "AD-3: import eod/app only, never eod/domain"
+            - pkg: "banking-go/services/core/internal/eod/adapters"
+              desc: "AD-3: import eod/app only, never eod/adapters"
+            - pkg: "banking-go/services/core/internal/audit/domain"
+              desc: "AD-3: import audit/app only, never audit/domain"
+            - pkg: "banking-go/services/core/internal/audit/adapters"
+              desc: "AD-3: import audit/app only, never audit/adapters"
+            - pkg: "banking-go/services/core/internal/platform/domain"
+              desc: "AD-3: import platform/app only, never platform/domain"
+            - pkg: "banking-go/services/core/internal/platform/adapters"
+              desc: "AD-3: import platform/app only, never platform/adapters"
+        core-ledger-boundaries:
+          files:
+            - "**/services/core/internal/ledger/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/customer/domain"
+              desc: "AD-3: import customer/app only, never customer/domain"
+            - pkg: "banking-go/services/core/internal/customer/adapters"
+              desc: "AD-3: import customer/app only, never customer/adapters"
+            - pkg: "banking-go/services/core/internal/account/domain"
+              desc: "AD-3: import account/app only, never account/domain"
+            - pkg: "banking-go/services/core/internal/account/adapters"
+              desc: "AD-3: import account/app only, never account/adapters"
+            - pkg: "banking-go/services/core/internal/payment/domain"
+              desc: "AD-3: import payment/app only, never payment/domain"
+            - pkg: "banking-go/services/core/internal/payment/adapters"
+              desc: "AD-3: import payment/app only, never payment/adapters"
+            - pkg: "banking-go/services/core/internal/eod/domain"
+              desc: "AD-3: import eod/app only, never eod/domain"
+            - pkg: "banking-go/services/core/internal/eod/adapters"
+              desc: "AD-3: import eod/app only, never eod/adapters"
+            - pkg: "banking-go/services/core/internal/audit/domain"
+              desc: "AD-3: import audit/app only, never audit/domain"
+            - pkg: "banking-go/services/core/internal/audit/adapters"
+              desc: "AD-3: import audit/app only, never audit/adapters"
+            - pkg: "banking-go/services/core/internal/platform/domain"
+              desc: "AD-3: import platform/app only, never platform/domain"
+            - pkg: "banking-go/services/core/internal/platform/adapters"
+              desc: "AD-3: import platform/app only, never platform/adapters"
+        core-payment-boundaries:
+          files:
+            - "**/services/core/internal/payment/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/customer/domain"
+              desc: "AD-3: import customer/app only, never customer/domain"
+            - pkg: "banking-go/services/core/internal/customer/adapters"
+              desc: "AD-3: import customer/app only, never customer/adapters"
+            - pkg: "banking-go/services/core/internal/account/domain"
+              desc: "AD-3: import account/app only, never account/domain"
+            - pkg: "banking-go/services/core/internal/account/adapters"
+              desc: "AD-3: import account/app only, never account/adapters"
+            - pkg: "banking-go/services/core/internal/ledger/domain"
+              desc: "AD-3: import ledger/app only, never ledger/domain"
+            - pkg: "banking-go/services/core/internal/ledger/adapters"
+              desc: "AD-3: import ledger/app only, never ledger/adapters"
+            - pkg: "banking-go/services/core/internal/eod/domain"
+              desc: "AD-3: import eod/app only, never eod/domain"
+            - pkg: "banking-go/services/core/internal/eod/adapters"
+              desc: "AD-3: import eod/app only, never eod/adapters"
+            - pkg: "banking-go/services/core/internal/audit/domain"
+              desc: "AD-3: import audit/app only, never audit/domain"
+            - pkg: "banking-go/services/core/internal/audit/adapters"
+              desc: "AD-3: import audit/app only, never audit/adapters"
+            - pkg: "banking-go/services/core/internal/platform/domain"
+              desc: "AD-3: import platform/app only, never platform/domain"
+            - pkg: "banking-go/services/core/internal/platform/adapters"
+              desc: "AD-3: import platform/app only, never platform/adapters"
+        core-eod-boundaries:
+          files:
+            - "**/services/core/internal/eod/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/customer/domain"
+              desc: "AD-3: import customer/app only, never customer/domain"
+            - pkg: "banking-go/services/core/internal/customer/adapters"
+              desc: "AD-3: import customer/app only, never customer/adapters"
+            - pkg: "banking-go/services/core/internal/account/domain"
+              desc: "AD-3: import account/app only, never account/domain"
+            - pkg: "banking-go/services/core/internal/account/adapters"
+              desc: "AD-3: import account/app only, never account/adapters"
+            - pkg: "banking-go/services/core/internal/ledger/domain"
+              desc: "AD-3: import ledger/app only, never ledger/domain"
+            - pkg: "banking-go/services/core/internal/ledger/adapters"
+              desc: "AD-3: import ledger/app only, never ledger/adapters"
+            - pkg: "banking-go/services/core/internal/payment/domain"
+              desc: "AD-3: import payment/app only, never payment/domain"
+            - pkg: "banking-go/services/core/internal/payment/adapters"
+              desc: "AD-3: import payment/app only, never payment/adapters"
+            - pkg: "banking-go/services/core/internal/audit/domain"
+              desc: "AD-3: import audit/app only, never audit/domain"
+            - pkg: "banking-go/services/core/internal/audit/adapters"
+              desc: "AD-3: import audit/app only, never audit/adapters"
+            - pkg: "banking-go/services/core/internal/platform/domain"
+              desc: "AD-3: import platform/app only, never platform/domain"
+            - pkg: "banking-go/services/core/internal/platform/adapters"
+              desc: "AD-3: import platform/app only, never platform/adapters"
+        core-audit-boundaries:
+          files:
+            - "**/services/core/internal/audit/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/customer/domain"
+              desc: "AD-3: import customer/app only, never customer/domain"
+            - pkg: "banking-go/services/core/internal/customer/adapters"
+              desc: "AD-3: import customer/app only, never customer/adapters"
+            - pkg: "banking-go/services/core/internal/account/domain"
+              desc: "AD-3: import account/app only, never account/domain"
+            - pkg: "banking-go/services/core/internal/account/adapters"
+              desc: "AD-3: import account/app only, never account/adapters"
+            - pkg: "banking-go/services/core/internal/ledger/domain"
+              desc: "AD-3: import ledger/app only, never ledger/domain"
+            - pkg: "banking-go/services/core/internal/ledger/adapters"
+              desc: "AD-3: import ledger/app only, never ledger/adapters"
+            - pkg: "banking-go/services/core/internal/payment/domain"
+              desc: "AD-3: import payment/app only, never payment/domain"
+            - pkg: "banking-go/services/core/internal/payment/adapters"
+              desc: "AD-3: import payment/app only, never payment/adapters"
+            - pkg: "banking-go/services/core/internal/eod/domain"
+              desc: "AD-3: import eod/app only, never eod/domain"
+            - pkg: "banking-go/services/core/internal/eod/adapters"
+              desc: "AD-3: import eod/app only, never eod/adapters"
+            - pkg: "banking-go/services/core/internal/platform/domain"
+              desc: "AD-3: import platform/app only, never platform/domain"
+            - pkg: "banking-go/services/core/internal/platform/adapters"
+              desc: "AD-3: import platform/app only, never platform/adapters"
+        core-platform-boundaries:
+          files:
+            - "**/services/core/internal/platform/**"
+          deny:
+            - pkg: "banking-go/services/core/internal/customer/domain"
+              desc: "AD-3: import customer/app only, never customer/domain"
+            - pkg: "banking-go/services/core/internal/customer/adapters"
+              desc: "AD-3: import customer/app only, never customer/adapters"
+            - pkg: "banking-go/services/core/internal/account/domain"
+              desc: "AD-3: import account/app only, never account/domain"
+            - pkg: "banking-go/services/core/internal/account/adapters"
+              desc: "AD-3: import account/app only, never account/adapters"
+            - pkg: "banking-go/services/core/internal/ledger/domain"
+              desc: "AD-3: import ledger/app only, never ledger/domain"
+            - pkg: "banking-go/services/core/internal/ledger/adapters"
+              desc: "AD-3: import ledger/app only, never ledger/adapters"
+            - pkg: "banking-go/services/core/internal/payment/domain"
+              desc: "AD-3: import payment/app only, never payment/domain"
+            - pkg: "banking-go/services/core/internal/payment/adapters"
+              desc: "AD-3: import payment/app only, never payment/adapters"
+            - pkg: "banking-go/services/core/internal/eod/domain"
+              desc: "AD-3: import eod/app only, never eod/domain"
+            - pkg: "banking-go/services/core/internal/eod/adapters"
+              desc: "AD-3: import eod/app only, never eod/adapters"
+            - pkg: "banking-go/services/core/internal/audit/domain"
+              desc: "AD-3: import audit/app only, never audit/domain"
+            - pkg: "banking-go/services/core/internal/audit/adapters"
+              desc: "AD-3: import audit/app only, never audit/adapters"
+  exclusions:
+    generated: strict
+    presets:
+      - comments
+      - std-error-handling
+    paths:
+      - pkg/gen
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - banking-go
+  exclusions:
+    generated: strict
+    paths:
+      - pkg/gen

@@ -11,3 +11,12 @@ CLAUDE.local.md
 
 # BMAD scripts cache
 _bmad/**/__pycache__/
+
+# Build / test output
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+bin/
+*.out

@@ -1,0 +1,9 @@
+go 1.27.1
+
+use (
+	./pkg
+	./services/admin-api
+	./services/core
+	./services/mocks
+	./services/public-api
+)

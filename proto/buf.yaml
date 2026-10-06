@@ -1,0 +1,11 @@
+# buf module for gRPC services, event payloads and audit records (AD-9).
+# Packages: banking.<service>.v1, banking.audit.v1. Lint + breaking run in CI.
+version: v2
+modules:
+  - path: .
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

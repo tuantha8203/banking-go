@@ -1,0 +1,134 @@
+# banking-go — developer entry points. `make help` lists targets.
+# make test / make lint never need Docker; integration tests (testcontainers) run with `make test-integration`.
+
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
+.DEFAULT_GOAL := help
+
+GO_MODULES := pkg services/core services/public-api services/admin-api services/mocks
+GO_PKGS    := $(foreach m,$(GO_MODULES),./$(m)/...)
+OPENAPI_SERVICES := public-api admin-api
+
+PNPM    := npx -y pnpm@12.9.1
+BIN     := $(CURDIR)/bin
+# Tools (buf, sqlc, goose, protoc-gen-go, protoc-gen-go-grpc) are pinned by `tool` directives in
+# tools/go.mod, a module kept outside go.work so its dependencies never leak into the services.
+GOTOOL  := cd $(CURDIR)/tools && GOWORK=off go tool
+COMPOSE := docker compose -f deploy/compose/compose.yaml
+
+.PHONY: help
+help: ## List targets
+	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+
+# ---------------------------------------------------------------------------------------------
+.PHONY: install
+install: ## Download Go modules and install pnpm deps (frozen lockfile)
+	@for m in $(GO_MODULES); do (cd $$m && go mod download); done
+	cd tools && GOWORK=off go mod download
+	$(PNPM) install --frozen-lockfile
+
+TOOL_STAMP := $(BIN)/.tools-stamp
+$(TOOL_STAMP): tools/go.mod tools/go.sum
+	cd tools && GOWORK=off go build -o $(BIN)/ \
+		github.com/bufbuild/buf/cmd/buf \
+		github.com/sqlc-dev/sqlc/cmd/sqlc \
+		github.com/pressly/goose/v3/cmd/goose \
+		google.golang.org/protobuf/cmd/protoc-gen-go \
+		google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	@touch $@
+
+.PHONY: tools
+tools: $(TOOL_STAMP) ## Build pinned Go tools into ./bin
+
+# ---------------------------------------------------------------------------------------------
+.PHONY: build build-go build-web
+build: build-go build-web ## Build all Go modules and SPAs
+build-go:
+	go build $(GO_PKGS)
+build-web:
+	$(PNPM) -r build
+
+.PHONY: test test-go test-web
+test: test-go test-web ## Unit tests: Go (all modules) + web (vitest); no Docker
+test-go:
+	go test $(GO_PKGS)
+test-web:
+	$(PNPM) -r test
+
+.PHONY: test-one
+test-one: ## One test. Go: make test-one PKG=./pkg/health RUN=TestReadyz · Web: make test-one WEB=@banking-go/web-customer RUN="renders"
+ifdef PKG
+	go test -count=1 -v $(PKG) $(if $(RUN),-run '$(RUN)')
+else ifdef WEB
+	$(PNPM) --filter $(WEB) exec vitest run $(if $(RUN),-t "$(RUN)")
+else
+	@echo "usage:"
+	@echo "  make test-one PKG=./pkg/health RUN=TestReadyz                   # Go package, optional -run regex"
+	@echo "  make test-one PKG=./services/core/cmd/core                      # all tests of one Go package"
+	@echo "  make test-one WEB=@banking-go/web-customer RUN='renders'        # vitest in one workspace package, -t filter"
+	@echo "  make test-one WEB=@banking-go/theme                             # all vitest tests of one package"
+endif
+
+.PHONY: test-integration
+test-integration: ## Integration tests (build tag integration, testcontainers; needs Docker). No such tests yet.
+	go test -tags integration -count=1 $(GO_PKGS)
+
+.PHONY: e2e
+e2e: ## Playwright smoke e2e against `vite preview` (run once: $(PNPM) --filter @banking-go/web-customer exec playwright install chromium)
+	$(PNPM) -r build
+	$(PNPM) -r e2e
+
+# ---------------------------------------------------------------------------------------------
+.PHONY: lint lint-go lint-proto lint-web vet
+lint: lint-go lint-proto lint-web ## golangci-lint per module + buf lint + eslint/prettier + tsc
+lint-go:
+	@for m in $(GO_MODULES); do echo "golangci-lint $$m"; (cd $$m && golangci-lint run ./...); done
+lint-proto:
+	$(GOTOOL) buf lint $(CURDIR)/proto
+lint-web:
+	$(PNPM) -r lint
+	$(PNPM) -r typecheck
+vet: ## go vet every module
+	go vet $(GO_PKGS)
+
+.PHONY: fmt
+fmt: ## Format Go (gofmt + goimports via golangci-lint), proto (buf format) and web (prettier)
+	@for m in $(GO_MODULES); do (cd $$m && golangci-lint fmt ./...); done
+	$(GOTOOL) buf format -w $(CURDIR)/proto
+	$(PNPM) run format
+
+# ---------------------------------------------------------------------------------------------
+.PHONY: gen gen-check
+gen: tools ## Regenerate code: protobuf (pkg/gen), OpenAPI (services/*/api/openapi); sqlc later
+	cd proto && $(BIN)/buf generate
+	@for s in $(OPENAPI_SERVICES); do \
+		echo "openapi $$s"; \
+		go run ./services/$$s/cmd/$$s openapi > services/$$s/api/openapi/$$s.yaml; \
+	done
+	@# sqlc: `cd services/<svc> && $(BIN)/sqlc generate` once a service has sqlc.yaml.
+
+gen-check: gen ## Fail if generated code differs from the committed files (CI)
+	git diff --exit-code -- pkg/gen services/public-api/api/openapi services/admin-api/api/openapi
+	@test -z "$$(git status --porcelain -- pkg/gen services/public-api/api/openapi services/admin-api/api/openapi)" || \
+		{ echo "untracked generated files:"; git status --porcelain -- pkg/gen services/*/api/openapi; exit 1; }
+
+# ---------------------------------------------------------------------------------------------
+.PHONY: up up-obs down run
+up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy
+	$(COMPOSE) up -d --wait
+up-obs: ## Start local deps + OpenTelemetry Collector (profile obs)
+	$(COMPOSE) --profile obs up -d --wait
+down: ## Stop local deps (keeps volumes; add `-v` by hand to wipe data)
+	$(COMPOSE) --profile obs down
+
+run: up ## Start deps, then print how to run each service
+	@echo ""
+	@echo "Dependencies are up. Run each deployable in its own terminal (env: cp .env.example .env; set -a; . ./.env; set +a):"
+	@echo "  go run ./services/core/cmd/core                 # gRPC :8090, admin :9190"
+	@echo "  go run ./services/core/cmd/core-worker          # admin :9191"
+	@echo "  go run ./services/public-api/cmd/public-api     # HTTP :8081, admin :9181"
+	@echo "  go run ./services/admin-api/cmd/admin-api       # HTTP :8082, admin :9182"
+	@echo "  go run ./services/mocks/cmd/mock-napas          # HTTP :8101, admin :9201 (ekyc :8102/:9202, otp :8103/:9203, gateway :8104/:9204)"
+	@echo "  $(PNPM) --filter @banking-go/web-customer dev   # http://localhost:5173"
+	@echo "  $(PNPM) --filter @banking-go/web-admin dev      # http://localhost:5174"
+	@echo "Telemetry: make up-obs and export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 OTEL_EXPORTER_OTLP_INSECURE=true"
