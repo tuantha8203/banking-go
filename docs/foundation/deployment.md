@@ -11,15 +11,15 @@
 - Rollout = Kubernetes rolling update có readiness gate; rollback = `git revert` commit digest → Argo CD sync; DB không bao giờ `down` migration ở staging/prod.
 
 ## Môi trường
-| | Local dev | CI | Staging | Prod |
-|---|---|---|---|---|
-| Mục đích | Code + debug | Gate mọi PR / commit `main` | Tích hợp liên tục, demo E2E, đo SLO/HA (NFR-A1..A4) | Release/demo trên managed AWS |
-| Hạ tầng | `docker compose` trên máy dev | GitHub-hosted runner `ubuntu-latest` | VPS kubeadm 1 CP + 3 worker, K8s 1.36 | AWS: EKS 1.36 + managed services, **ephemeral** |
-| Chạy gì | PostgreSQL 18, RabbitMQ 4.3, SeaweedFS, otelcol-contrib + Jaeger v2 + Prometheus/Grafana (profile `obs`); Go service chạy `go run`/compose; SPA `vite dev`; 4 mock | Lint, unit, integration (testcontainers PG 18 + RabbitMQ 4.3), contract check, scan, build image | Mọi deployable (AD-1) + add-on platform + observability tự dựng | Mọi deployable (kể cả mock) + dịch vụ AWS |
-| Dữ liệu | Seed dev, xóa thoải mái | Container tạm | Dữ liệu demo bền, backup + PITR | Disposable, mất khi destroy |
-| Deploy | Thủ công | — | Tự động mỗi commit `main` (digest bump) | `release-prod.yml` + owner duyệt |
-| Thời gian sống | — | Mỗi job | Liên tục | Chỉ trong cửa sổ release/demo |
-| Rollback | `docker compose down -v` + `git checkout` | n/a — chạy lại job / revert PR | `rollback.yml` / `db-pitr.yml` theo § Rollback | `rollback.yml` / `db-pitr.yml` theo § Rollback (owner duyệt) |
+| | Local dev | Kind | CI | Staging | Prod |
+|---|---|---|---|---|---|
+| Mục đích | Code + debug | Thử GitOps/Helm/add-on/observability trước staging (ADR 0011) | Gate mọi PR / commit `main` | Tích hợp liên tục, demo E2E, đo SLO/HA (NFR-A1..A4) | Release/demo trên managed AWS |
+| Hạ tầng | `docker compose` trên máy dev | kind 1.36 trên máy dev, 1 CP + 2 worker | GitHub-hosted runner `ubuntu-latest` | VPS kubeadm 1 CP + 3 worker, K8s 1.36 | AWS: EKS 1.36 + managed services, **ephemeral** |
+| Chạy gì | PostgreSQL 18, RabbitMQ 4.3, SeaweedFS, otelcol-contrib + Jaeger v2 + Prometheus/Grafana (profile `obs`); Go service chạy `go run`/compose; SPA `vite dev`; 4 mock | Mọi deployable + add-on platform bản nhẹ (1 replica, không ECK; Jaeger in-memory) | Lint, unit, integration (testcontainers PG 18 + RabbitMQ 4.3), contract check, scan, build image | Mọi deployable (AD-1) + add-on platform + observability tự dựng | Mọi deployable (kể cả mock) + dịch vụ AWS |
+| Dữ liệu | Seed dev, xóa thoải mái | Seed dev, xóa cluster là mất | Container tạm | Dữ liệu demo bền, backup + PITR | Disposable, mất khi destroy |
+| Deploy | Thủ công | Tự động mỗi commit `main` (bot bump `deploy/releases/kind.yaml`, Argo CD trên kind kéo GitHub) | — | Tự động mỗi commit `main` (digest bump) | `release-prod.yml` + owner duyệt |
+| Thời gian sống | — | Khi dev bật (`make kind-up` / `kind-down`) | Mỗi job | Liên tục | Chỉ trong cửa sổ release/demo |
+| Rollback | `docker compose down -v` + `git checkout` | `rollback.yml -f env=kind` | n/a — chạy lại job / revert PR | `rollback.yml` / `db-pitr.yml` theo § Rollback | `rollback.yml` / `db-pitr.yml` theo § Rollback (owner duyệt) |
 
 Compose dùng image upstream chính thức (không Bitnami); file `deploy/compose/compose.yaml` + `.env.example` `[D-1]`.
 
@@ -81,7 +81,7 @@ Root app `bg-staging-root` → các Application con; thứ tự bằng `argocd.a
 | -10 | Jaeger v2 (storage ES) | v2.21 / chart 4.14 | Chart jaegertracing |
 | -10 | OpenTelemetry Collector contrib | v0.162 | Chart open-telemetry, config `deploy/collector/staging.yaml` |
 | -5 | Data: CNPG `Cluster pg` (3 instance, sync ANY 1), `Database`/managed roles; `RabbitmqCluster rmq` (3); topology `deploy/messaging/`; bucket SeaweedFS | — | CR trong Git |
-| 0 | Apps: 4 service + 4 mock + 2 SPA (Helm `deploy/helm/<deployable>`, `values-staging.yaml` + `deploy/releases/staging.yaml`) | digest | Argo CD auto-sync, prune, selfHeal |
+| 0 | Apps: 4 service + 4 mock + 2 SPA (Helm `deploy/helm/<deployable>`, `values-staging.yaml` + `deploy/releases/staging.yaml`; env kind: `values-kind.yaml` + `deploy/releases/kind.yaml`, app-of-apps `deploy/argocd/kind/`) | digest | Argo CD auto-sync, prune, selfHeal |
 
 ### Capacity budget staging (spine Deferred) `[D-10]`
 Tổng request bộ nhớ mục tiêu ≤ 18 GiB / 24 GiB worker (chừa ~1 GiB/node cho kubelet/system). Xem lại sau load test R3.
@@ -188,7 +188,7 @@ flowchart LR
 | File | Trigger | Việc | Environment |
 |---|---|---|---|
 | `ci.yml` | `pull_request`, `workflow_call` | Lint, test, contract check, gitleaks, SAST, deps scan; build image không push | — |
-| `main.yml` | `push` → `main` | Gọi `ci.yml` → build → scan → SBOM/ký → push GHCR → commit bump `deploy/releases/staging.yaml` (concurrency `staging-deploy`) | — |
+| `main.yml` | `push` → `main` | Gọi `ci.yml` → build → scan → SBOM/ký → push GHCR → commit bump `deploy/releases/staging.yaml` và `deploy/releases/kind.yaml` (concurrency `staging-deploy`) | — |
 | `staging-verify.yml` | `workflow_run` (`main.yml` success), `workflow_dispatch` | `argocd app wait` staging → smoke → E2E → DAST → `cosign attest --type staging-verified` cho từng digest → watch 10 phút (không chặn, `observability.md` § Post-deploy watch) | `staging` |
 | `staging-drills.yml` | `workflow_dispatch` (`drill`: `chaos\|pitr\|node-drain\|failover\|load\|all`) | NFR-M2, NFR-A2, NFR-A3, NFR-A4, NFR-P1 trên staging; mở PR lưu báo cáo `tests/*/reports/` | `staging` |
 | `staging-infra.yml` | `workflow_dispatch` | Ansible `infra/staging/` (kubeadm, OS patch, nâng K8s) `[D-21]` | `staging-infra` (owner duyệt) |
