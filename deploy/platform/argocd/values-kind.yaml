@@ -11,6 +11,10 @@ dex:
 notifications:
   enabled: false
 controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
   resources:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {memory: 768Mi}

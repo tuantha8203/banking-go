@@ -83,7 +83,7 @@ Sprint S2 — "Observability as code trên kind"
 - [x] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`) — làm trước T13 (owner duyệt)
 - [x] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
 - [x] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
-- [ ] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
+- [x] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
 - [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
 - [ ] T17: Runbook + `make kind-watch`
 
@@ -4886,7 +4886,7 @@ git commit -m "feat(platform): v1 alert rules with SLI recording rules and promt
 - Consumes: Grafana sidecar label `grafana_dashboard: "1"`, datasource uid `prom`/`traces` (T13); `gen-observability.sh`, addon `observability-as-code` (T14); metric CNPG (`cnpg_*`), RabbitMQ (`rabbitmq_*`), Argo CD (`argocd_app_info`), kube-state-metrics.
 - Produces: dashboard uid `bg-service-overview` (panel "Rate (req/s)", "Errors (5xx ratio)", "Duration p95 (s)"), `bg-platform` (panel "Argo CD applications", "PostgreSQL up", "RabbitMQ messages ready"); ConfigMap `monitoring/bg-dashboard-<name>`; PodMonitor `banking-data/pg`, ServiceMonitor `banking-data/rmq`; target `make dashboards-test`.
 
-- [ ] **Step 1: Viết test thất bại** — `scripts/test-dashboards.sh`
+- [x] **Step 1: Viết test thất bại** — `scripts/test-dashboards.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -4930,7 +4930,7 @@ dashboards-test: ## Validate observability/dashboards/*.json (uids, datasources,
 Run: `chmod +x scripts/test-dashboards.sh && make dashboards-test`
 Expected: `FAIL: no dashboards in observability/dashboards`.
 
-- [ ] **Step 2: `observability/dashboards/service-overview.json`**
+- [x] **Step 2: `observability/dashboards/service-overview.json`**
 
 ```json
 {
@@ -5090,7 +5090,7 @@ Expected: `FAIL: no dashboards in observability/dashboards`.
 }
 ```
 
-- [ ] **Step 3: `observability/dashboards/platform.json`**
+- [x] **Step 3: `observability/dashboards/platform.json`**
 
 ```json
 {
@@ -5210,7 +5210,7 @@ Expected: `FAIL: no dashboards in observability/dashboards`.
 Run: `make dashboards-test`
 Expected: `ok   observability/dashboards/platform.json`, `ok   observability/dashboards/service-overview.json`.
 
-- [ ] **Step 4: Generator + scrape**
+- [x] **Step 4: Generator + scrape**
 
 Thêm vào cuối `scripts/gen-observability.sh` (trước dòng `echo "generated …"` thay bằng dòng echo mới):
 ```bash
@@ -5289,7 +5289,7 @@ done
 Run: `make obs-gen && make dashboards-test alerts-test && make kind-up && make kind-platform && make kind-smoke`
 Expected: `generated 2 PrometheusRule and 2 dashboard file(s)`; kind-smoke thêm `ok   Grafana dashboard bg-service-overview`, `ok   Grafana dashboard bg-platform`; `prom_value 'max(cnpg_collector_up)'` = 1 (kiểm tay: `bash -c '. scripts/lib/kind.sh; PATH=bin:$PATH prom_value "max(cnpg_collector_up)"'`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add observability/dashboards scripts/test-dashboards.sh scripts/gen-observability.sh deploy/platform/observability deploy/platform/argocd/values-kind.yaml scripts/kind-smoke.sh Makefile

@@ -174,8 +174,8 @@
       "dependencies": [
         "T14"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (dd39ae4): make dashboards-test → \"FAIL: no dashboards in observability/dashboards\"; kind-smoke → \"FAIL: Grafana dashboard bg-service-overview missing\". GREEN: make dashboards-test → ok platform.json + service-overview.json; make obs-gen → \"generated 2 PrometheusRule and 2 dashboard file(s)\"; make alerts-test Valid 2; make kind-up (Argo CD controller metrics + ServiceMonitor) exit 0; scripts/kind-platform.sh observability-as-code → ConfigMap bg-dashboard-*, PodMonitor pg, ServiceMonitor rmq applied; make kind-smoke → \"ok   Grafana dashboard bg-service-overview\", \"ok   Grafana dashboard bg-platform\", all checks passed; check-platform exit 0; prom: max(cnpg_collector_up)=1, up rmq=1, up argocd=1 (argocd_app_info chưa có series vì chưa có Application — S3/T21); make lint/test exit 0; make obs-gen-check exit 0 (sau commit). Lệch plan: chạy addon observability-as-code thay full make kind-platform (RAM máy ~1.8 GiB free)."
     },
     {
       "id": "T16",

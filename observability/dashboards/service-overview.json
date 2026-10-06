@@ -1,0 +1,155 @@
+{
+  "uid": "bg-service-overview",
+  "title": "banking-go / Service overview (RED)",
+  "description": "Golden signals per deployable, SLO burn, firing alerts, running versions (observability.md § Dashboards).",
+  "tags": ["banking-go", "red", "slo"],
+  "editable": false,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "30s",
+  "timezone": "browser",
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "query",
+        "datasource": {"type": "prometheus", "uid": "prom"},
+        "definition": "label_values(http_server_request_duration_seconds_count, service_name)",
+        "query": {"query": "label_values(http_server_request_duration_seconds_count, service_name)", "refId": "service"},
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {"selected": true, "text": ["All"], "value": ["$__all"]},
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Rate (req/s)",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prom"},
+          "expr": "sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Errors (5xx ratio)",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prom"},
+          "expr": "sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\"$service\",http_response_status_code=~\"5..\"}[$__rate_interval])) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\"$service\",http_response_status_code!~\"4..\"}[$__rate_interval]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Duration p95 (s)",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prom"},
+          "expr": "histogram_quantile(0.95, sum by (service_name, le) (rate(http_server_request_duration_seconds_bucket{service_name=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "{{service_name}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "core gRPC rate by method",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prom"},
+          "expr": "sum by (rpc_method) (rate(rpc_server_duration_milliseconds_count{service_name=\"core\"}[$__rate_interval]))",
+          "legendFormat": "{{rpc_method}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "core gRPC server error ratio",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prom"},
+          "expr": "sum(rate(rpc_server_duration_milliseconds_count{service_name=\"core\",rpc_grpc_status_code=~\"2|4|13|14|15\"}[$__rate_interval])) / sum(rate(rpc_server_duration_milliseconds_count{service_name=\"core\"}[$__rate_interval]))",
+          "legendFormat": "core"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Error budget burn rate (1h)",
+      "description": "sli:error_ratio:rate1h / 0.001 — 14.4 or more pages (ErrorBudgetBurnFast).",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 2, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 14.4}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "background", "textMode": "value_and_name"},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prom"}, "expr": "sli:error_ratio:rate1h / 0.001", "legendFormat": "{{service}}"}
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Firing alerts",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "none", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "colorMode": "background"},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prom"}, "expr": "count(ALERTS{alertstate=\"firing\",severity!=\"none\"}) or vector(0)"}
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Running versions",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "options": {"showHeader": true},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "prom"}, "expr": "max by (service_name, service_version) (target_info{service_name=~\"$service\"})", "format": "table", "instant": true}
+      ]
+    }
+  ]
+}
