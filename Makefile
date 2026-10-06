@@ -250,6 +250,9 @@ dashboards-test: ## Validate observability/dashboards/*.json (uids, datasources,
 .PHONY: alertmanager-test
 alertmanager-test: tools-k8s ## amtool check + routing test of observability/alertmanager/kind.yaml
 	scripts/test-alertmanager.sh
+.PHONY: runbooks-test
+runbooks-test: tools-k8s ## Every runbook_url label points to a runbook with the required sections
+	scripts/test-runbooks.sh
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
