@@ -1,0 +1,84 @@
+rule_files:
+  - ../platform.yaml
+evaluation_interval: 1m
+tests:
+  - name: Watchdog always fires
+    interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels: {severity: none, service: platform, runbook_url: observability/runbooks/watchdog.md}
+            exp_annotations: {summary: "Always firing. If Telegram stops receiving it, alerting is broken."}
+  - name: Collector failing to export metric points
+    interval: 1m
+    input_series:
+      - series: 'otelcol_exporter_send_failed_metric_points_total{exporter="prometheusremotewrite"}'
+        values: '0+5x30'
+      - series: 'up{job="otel-collector"}'
+        values: '1+0x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: TelemetryPipelineDegraded
+        exp_alerts:
+          - exp_labels: {severity: warning, service: otel-collector, runbook_url: observability/runbooks/telemetry-pipeline.md}
+            exp_annotations: {summary: "The OpenTelemetry Collector is failing to export or is down."}
+  - name: Collector down
+    interval: 1m
+    input_series:
+      - series: 'up{job="otel-collector"}'
+        values: '0+0x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: TelemetryPipelineDegraded
+        exp_alerts:
+          - exp_labels: {severity: warning, service: otel-collector, runbook_url: observability/runbooks/telemetry-pipeline.md, job: otel-collector}
+            exp_annotations: {summary: "The OpenTelemetry Collector is failing to export or is down."}
+  - name: certificate expiring in 10 days warns, not critical
+    interval: 1m
+    input_series:
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{name="wildcard-kind-localhost",namespace="traefik"}'
+        values: '864000+0x120'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: CertificateExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, service: cert-manager, runbook_url: observability/runbooks/certificate-expiry.md, name: wildcard-kind-localhost, namespace: traefik}
+            exp_annotations: {summary: "Certificate traefik/wildcard-kind-localhost expires in less than 14 days."}
+      - eval_time: 70m
+        alertname: CertificateNotReady
+        exp_alerts: []
+  - name: certificate not ready
+    interval: 1m
+    input_series:
+      - series: 'certmanager_certificate_ready_status{condition="False",name="core-mtls",namespace="banking"}'
+        values: '1+0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: CertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: critical, service: cert-manager, runbook_url: observability/runbooks/certificate-expiry.md, condition: "False", name: core-mtls, namespace: banking}
+            exp_annotations: {summary: "Certificate banking/core-mtls is not ready or expires in less than 3 days."}
+  - name: pod in CrashLoopBackOff
+    interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace="banking",pod="core-7d9f",container="core"}'
+        values: '1+0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PodCrashLooping
+        exp_alerts:
+          - exp_labels: {severity: warning, service: kubernetes, runbook_url: observability/runbooks/pod-crashloop.md, namespace: banking, pod: core-7d9f, container: core}
+            exp_annotations: {summary: "banking/core-7d9f container core is crash-looping."}
+  - name: Argo CD application degraded
+    interval: 1m
+    input_series:
+      - series: 'argocd_app_info{name="core",health_status="Degraded",sync_status="Synced"}'
+        values: '1+0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ArgoCDAppDegraded
+        exp_alerts:
+          - exp_labels: {severity: warning, service: argocd, runbook_url: observability/runbooks/argocd-app-degraded.md, name: core}
+            exp_annotations: {summary: "Argo CD application core is Degraded or Missing."}

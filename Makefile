@@ -233,6 +233,19 @@ kind-smoke: tools-k8s ## Smoke the kind env: 4 hosts via Traefik, migration Jobs
 	scripts/kind-smoke.sh
 
 # ---------------------------------------------------------------------------------------------
+# Observability as code (platform v1): observability/ → deploy/platform/observability/kind (generated).
+.PHONY: alerts-test obs-gen obs-gen-check
+alerts-test: tools-k8s ## promtool check + unit tests of observability/alerts, kubeconform of the generated PrometheusRules
+	$(PROMTOOL) check rules observability/alerts/*.yaml
+	$(PROMTOOL) test rules observability/alerts/tests/*.yaml
+	$(KUBECONFORM) $(KUBECONFORM_FLAGS) deploy/platform/observability/kind/rules
+obs-gen: ## Regenerate PrometheusRule / dashboard ConfigMaps from observability/
+	scripts/gen-observability.sh
+obs-gen-check: obs-gen ## Fail if generated observability objects differ from the committed files (CI)
+	git diff --exit-code -- deploy/platform/observability
+	@test -z "$$(git status --porcelain -- deploy/platform/observability)" || { git status --porcelain -- deploy/platform/observability; exit 1; }
+
+# ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy
 	$(COMPOSE) up -d --wait

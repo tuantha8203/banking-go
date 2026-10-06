@@ -74,3 +74,13 @@ for h in grafana jaeger argocd rabbitmq; do
   code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://$h.kind.localhost/")
   [[ $code =~ ^(200|301|302)$ ]] || fail "https://$h.kind.localhost → $code"; ok "https://$h.kind.localhost → $code"
 done
+
+# --- wave -9: observability as code
+groups=$(svc_get monitoring kube-prometheus-stack-prometheus:9090 /api/v1/rules | jq -r '[.data.groups[].name] | join(",")')
+for g in bg-sli bg-slo bg-platform; do [[ ,$groups, == *",$g,"* ]] || fail "rule group $g not loaded ($groups)"; done
+ok "rule groups bg-sli, bg-slo, bg-platform loaded"
+for _ in $(seq 24); do
+  [[ $(prom 'ALERTS{alertname="Watchdog",alertstate="firing"}' | jq '.data.result | length') -ge 1 ]] && break; sleep 5
+done
+[[ $(prom 'ALERTS{alertname="Watchdog",alertstate="firing"}' | jq '.data.result | length') -ge 1 ]] || fail "Watchdog not firing"
+ok "Watchdog firing"
