@@ -138,6 +138,29 @@ gen-check: gen ## Fail if generated code differs from the committed files (CI)
 		{ echo "untracked generated files:"; git status --porcelain -- pkg/gen services/*/api/openapi; exit 1; }
 
 # ---------------------------------------------------------------------------------------------
+# Images (platform v1). Local tags banking-go/<image>:local; CI/main.yml pushes ghcr.io/<owner>/banking-go/<image>.
+GIT_SHA      := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+VERSION      ?= sha-$(shell git rev-parse --short=7 HEAD 2>/dev/null || echo dev)
+IMAGE_PREFIX ?= banking-go
+IMAGE_TAG    ?= local
+GO_IMAGES    := core public-api admin-api mocks
+IMAGES       := $(GO_IMAGES)
+# Forward the host's proxy env to the build (BuildKit predefined args: not kept in image history; none set in CI).
+PROXY_BUILD_ARGS := $(foreach v,HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy,$(if $($(v)),--build-arg $(v)))
+
+.PHONY: images images-go image-smoke
+images: images-go ## Build the deployable images as $(IMAGE_PREFIX)/<image>:$(IMAGE_TAG) (needs Docker buildx)
+images-go:
+	@for i in $(GO_IMAGES); do \
+		echo "== image $$i"; \
+		docker buildx build --load -f deploy/docker/go.Dockerfile $(PROXY_BUILD_ARGS) \
+			--build-arg SERVICE=$$i --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(GIT_SHA) \
+			-t $(IMAGE_PREFIX)/$$i:$(IMAGE_TAG) . || exit 1; \
+	done
+image-smoke: ## Run every local image and probe it (make images first)
+	VERSION=$(VERSION) scripts/image-smoke.sh $(IMAGE_PREFIX) $(IMAGE_TAG)
+
+# ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy
 	$(COMPOSE) up -d --wait

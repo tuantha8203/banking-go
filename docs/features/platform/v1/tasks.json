@@ -42,8 +42,8 @@
       "dependencies": [
         "T2"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make images (4 image: core, public-api, admin-api, mocks; exit 0) && make image-smoke → 8× \"ok <deployable> /livez\" + 3× \"migrate up → no-op\", \"image-smoke: all images passed\" (exit 0); user 65532:65532, label version=sha-f4e7f9f revision=f4e7f9f…; make test-one PKG=./pkg/buildinfo RUN=TestDefaults PASS; make lint exit 0; make test exit 0. Size core:local 58.6MB unpacked / 15MB compressed (plan expected <40MB)."
     },
     {
       "id": "T4",
