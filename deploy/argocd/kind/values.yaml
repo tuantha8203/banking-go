@@ -90,3 +90,6 @@ addons:
   - name: ops-routes
     wave: -10
     path: deploy/platform/routes/kind
+  - name: observability-as-code
+    wave: -9
+    path: deploy/platform/observability/kind

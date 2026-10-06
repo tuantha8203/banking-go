@@ -76,7 +76,11 @@ for h in grafana jaeger argocd rabbitmq; do
 done
 
 # --- wave -9: observability as code
-groups=$(svc_get monitoring kube-prometheus-stack-prometheus:9090 /api/v1/rules | jq -r '[.data.groups[].name] | join(",")')
+# the operator reloads Prometheus ~30-60 s after a PrometheusRule is applied: poll before asserting
+for _ in $(seq 24); do
+  groups=$(svc_get monitoring kube-prometheus-stack-prometheus:9090 /api/v1/rules | jq -r '[.data.groups[].name] | join(",")')
+  [[ ,$groups, == *",bg-sli,"* && ,$groups, == *",bg-slo,"* && ,$groups, == *",bg-platform,"* ]] && break; sleep 5
+done
 for g in bg-sli bg-slo bg-platform; do [[ ,$groups, == *",$g,"* ]] || fail "rule group $g not loaded ($groups)"; done
 ok "rule groups bg-sli, bg-slo, bg-platform loaded"
 for _ in $(seq 24); do

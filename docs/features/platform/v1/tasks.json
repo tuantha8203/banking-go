@@ -164,8 +164,8 @@
       "dependencies": [
         "T13"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (2b9db62): make alerts-test → \"path 'observability/alerts/*.yaml' does not exist\"; promtool test → FAILED got:[]; check-platform → \"FAIL: rule group bg-sli not loaded ()\". GREEN: promtool check rules → platform.yaml \"SUCCESS: 6 rules found\", slo.yaml \"SUCCESS: 11 rules found\"; promtool test rules → SUCCESS ×2; make obs-gen → \"generated 2 PrometheusRule file(s)\"; make alerts-test → kubeconform \"Valid: 2, Invalid: 0\", exit 0; make obs-gen-check exit 0 (sau commit); scripts/kind-platform.sh observability-as-code → \"== wave -9: observability-as-code\", PrometheusRule bg-platform/bg-slo applied; check-platform → \"ok   rule groups bg-sli, bg-slo, bg-platform loaded\", \"ok   Watchdog firing\", exit 0 (cả khi xóa rule rồi apply lại); trên cluster chỉ Watchdog firing, up{job=\"otel-collector\"} đúng job; make lint/test exit 0. Lệch plan: (1) TelemetryPipelineDegraded: `absent(up{job=\"otel-collector\"} == 1)` mất nhãn job (test \"Collector down\" FAIL) → `up{job=\"otel-collector\"} == 0 or absent(up{job=\"otel-collector\"})`; (2) check-platform poll rule groups tới 2 phút (operator reload Prometheus 30–60 s sau khi apply; lần đầu FAIL \"bg-sli not loaded ()\" rồi tự load), assertion giữ nguyên; (3) chạy `scripts/kind-platform.sh observability-as-code` + check-platform thay vì full `make kind-platform` (máy còn ~2 GiB RAM, xem T13)."
     },
     {
       "id": "T15",

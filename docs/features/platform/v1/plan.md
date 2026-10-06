@@ -82,7 +82,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 Sprint S2 — "Observability as code trên kind"
 - [x] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`) — làm trước T13 (owner duyệt)
 - [x] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
-- [ ] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
+- [x] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
 - [ ] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
 - [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
 - [ ] T17: Runbook + `make kind-watch`
@@ -4457,7 +4457,7 @@ git commit -m "feat(platform): kind observability stack (prometheus, grafana 12.
 - Consumes: metric `http_server_request_duration_seconds_{count,bucket}`, `rpc_server_duration_milliseconds_count` (label `service_name` qua remote write, T13), `otelcol_exporter_send_failed_*`, `up{job="otel-collector"}`, `certmanager_certificate_*`, `kube_pod_container_status_waiting_reason`, `argocd_app_info`; `bin/promtool`, `KUBECONFORM_FLAGS` (T7), `prom`/`svc_get` (T13).
 - Produces: recording rule `sli:error_ratio:rate{5m,30m,1h,2h,6h,1d,3d}`, `sli:latency_p95:rate5m` (nhãn `service`, `service_name`[, `route_class`]); alert `Watchdog`, `ErrorBudgetBurnFast`, `ErrorBudgetBurnSlow`, `LatencyP95Breach`, `TelemetryPipelineDegraded`, `CertificateExpiringSoon`, `CertificateNotReady`, `PodCrashLooping`, `ArgoCDAppDegraded` với nhãn `severity`, `service`, `runbook_url` (đường dẫn trong repo `observability/runbooks/<kebab>.md`, T17 tạo file); `scripts/gen-observability.sh` (alerts → `deploy/platform/observability/kind/rules/bg-<file>.yaml`); target `make alerts-test`, `make obs-gen`, `make obs-gen-check`.
 
-- [ ] **Step 1: Viết promtool test thất bại**
+- [x] **Step 1: Viết promtool test thất bại**
 
 `observability/alerts/tests/slo_test.yaml`:
 ```yaml
@@ -4652,7 +4652,7 @@ obs-gen-check: obs-gen ## Fail if generated observability objects differ from th
 Run: `make alerts-test`
 Expected: FAIL — `Checking observability/alerts/*.yaml … no such file or directory`.
 
-- [ ] **Step 2: Rule** — `observability/alerts/slo.yaml`
+- [x] **Step 2: Rule** — `observability/alerts/slo.yaml`
 
 ```yaml
 # SLI recording rules + SLO alerts v1 (spec §10; observability.md § SLI/SLO, § Alert catalog, recording rule naming).
@@ -4804,12 +4804,12 @@ groups:
           summary: "Argo CD application {{ $labels.name }} is Degraded or Missing."
 ```
 
-- [ ] **Step 3: Chạy promtool**
+- [x] **Step 3: Chạy promtool**
 
 Run: `bin/promtool check rules observability/alerts/*.yaml && bin/promtool test rules observability/alerts/tests/*.yaml`
 Expected: `observability/alerts/platform.yaml` → `SUCCESS: 6 rules found`, `observability/alerts/slo.yaml` → `SUCCESS: 11 rules found`; `Unit Testing: … SUCCESS` cho 2 file test.
 
-- [ ] **Step 4: Generator** — `scripts/gen-observability.sh`
+- [x] **Step 4: Generator** — `scripts/gen-observability.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -4841,7 +4841,7 @@ echo "generated $(ls "$OUT/rules" | wc -l) PrometheusRule file(s)"
 Run: `chmod +x scripts/gen-observability.sh && make obs-gen && make alerts-test`
 Expected: `generated 2 PrometheusRule file(s)`; promtool SUCCESS; kubeconform `Valid: 2, Invalid: 0`.
 
-- [ ] **Step 5: Nạp vào cluster** — catalog `deploy/argocd/kind/values.yaml`, thêm cuối `addons:`:
+- [x] **Step 5: Nạp vào cluster** — catalog `deploy/argocd/kind/values.yaml`, thêm cuối `addons:`:
 
 ```yaml
   - name: observability-as-code
@@ -4864,7 +4864,7 @@ ok "Watchdog firing"
 Run: `make kind-platform`
 Expected: `== wave -9: observability-as-code`, check in `ok   rule groups …` và `ok   Watchdog firing`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add observability/alerts scripts/gen-observability.sh deploy/platform/observability deploy/argocd/kind/values.yaml deploy/kind/check-platform.sh Makefile
