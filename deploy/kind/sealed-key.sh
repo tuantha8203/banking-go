@@ -2,6 +2,7 @@
 # Backup/restore of the kind Sealed Secrets controller key outside the repo (spec §9, ADR 0011).
 #   sealed-key.sh restore   apply the saved key into kube-system before the controller starts (no-op without a backup)
 #   sealed-key.sh backup    save the controller key(s) + public cert to $BG_CONFIG_DIR (default ~/.config/banking-go), 0600
+#                           --require-key: fail when the controller has no key yet (post hook right after installing it)
 # Always talks to the kind context (never the current one), so a foreign key is never saved or restored.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -24,7 +25,10 @@ case "${1:-}" in
     fi ;;
   backup)
     keys=$(kubectl --context "$KIND_CONTEXT" -n "$NS" get secret -l "$LABEL" -o name)
-    [[ -n $keys ]] || { echo "[sealed-key] no controller key in $NS yet: nothing to back up"; exit 0; }
+    if [[ -z $keys ]]; then
+      [[ ${2:-} == --require-key ]] && { echo "[sealed-key] no controller key in $NS yet" >&2; exit 1; }
+      echo "[sealed-key] no controller key in $NS yet: nothing to back up"; exit 0
+    fi
     mkdir -p "$DIR" && chmod 700 "$DIR"
     umask 077
     kubectl --context "$KIND_CONTEXT" -n "$NS" get secret -l "$LABEL" -o yaml \

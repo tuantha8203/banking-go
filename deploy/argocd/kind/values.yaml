@@ -23,7 +23,7 @@ addons:
     namespace: kube-system
     chart: {repo: https://bitnami.github.io/sealed-secrets, name: sealed-secrets, version: 2.20.0}
     values: [deploy/platform/sealed-secrets/values-kind.yaml]
-    post: deploy/kind/sealed-key.sh backup
+    post: deploy/kind/sealed-key.sh backup --require-key
   - name: traefik
     wave: -20
     namespace: traefik

@@ -27,8 +27,13 @@ issuer=$(curl -skv --max-time 10 https://probe.kind.localhost/ 2>&1 | grep -i 'i
 [[ $issuer == *"banking-go kind root CA"* ]] || fail "TLS on :443 is not issued by the kind CA ($issuer)"
 code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 https://probe.kind.localhost/)
 [[ $code == 404 ]] || fail "Traefik on :443 answered $code for an unknown host (want 404)"; ok "Traefik serves *.kind.localhost with the kind CA"
-[[ -s ${BG_CONFIG_DIR:-$HOME/.config/banking-go}/sealed-secrets-key.yaml ]] || fail "Sealed Secrets key not backed up"
-ok "Sealed Secrets key backed up"
+key_backup=${BG_CONFIG_DIR:-$HOME/.config/banking-go}/sealed-secrets-key.yaml
+[[ -s $key_backup ]] || fail "Sealed Secrets key not backed up"
+running=$(kubectl -n kube-system get secret -l sealedsecrets.bitnami.com/sealed-secrets-key \
+  -o jsonpath='{range .items[*]}{.data.tls\.crt}{"\n"}{end}' | sort)
+saved=$(yq '.items[].data."tls.crt"' "$key_backup" | sort)
+[[ -n $running && $running == "$saved" ]] || fail "Sealed Secrets backup is stale: $key_backup does not hold the running key(s) (run deploy/kind/sealed-key.sh backup)"
+ok "Sealed Secrets key backed up (matches the running key)"
 
 # --- waves -18/-15/-14: secrets + data
 "$ROOT/scripts/check-no-plain-secrets.sh"

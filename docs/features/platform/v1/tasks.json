@@ -94,7 +94,7 @@
         "T1"
       ],
       "status": "done",
-      "evidence": "deploy/kind/check-cluster.sh trước implement → \"kubectl context is '', want kind-banking-go\", exit 1 (RED). make kind-up lần 1 → \"[bootstrap] creating cluster banking-go\", Argo CD chart 10.9.6 REVISION 1, \"ok   kind cluster banking-go: 3 nodes v1.36.4, 80/443 on control-plane, Argo CD running\", exit 0 (5m58s, gồm pull image qua proxy); lần 2 → \"cluster banking-go exists\", REVISION 2, ok, exit 0 (9s). make kind-down → \"[sealed-key] no controller key in kube-system yet\" (bỏ qua nhờ -), xóa 3 node, exit 0; make kind-up dựng lại → ok, exit 0 (2m55s). sealed-key.sh với BG_CONFIG_DIR tạm + secret giả có nhãn sealed-secrets-key: backup ghi key 0600 (dir 700, không để lại .tmp khi --fetch-cert lỗi vì chưa có controller), restore apply lại secret; arg sai → usage exit 2. make lint → exit 0. Lệch plan: thêm trap xóa file .tmp trong sealed-key.sh. Không có shellcheck trên máy (chỉ bash -n)."
+      "evidence": "deploy/kind/check-cluster.sh trước implement → \"kubectl context is '', want kind-banking-go\", exit 1 (RED). make kind-up lần 1 → \"[bootstrap] creating cluster banking-go\", Argo CD chart 10.9.6 REVISION 1, \"ok   kind cluster banking-go: 3 nodes v1.36.4, 80/443 on control-plane, Argo CD running\", exit 0 (5m58s, gồm pull image qua proxy); lần 2 → \"cluster banking-go exists\", REVISION 2, ok, exit 0 (9s). make kind-down → \"[sealed-key] no controller key in kube-system yet\" (bỏ qua nhờ -), xóa 3 node, exit 0; make kind-up dựng lại → ok, exit 0 (2m55s). sealed-key.sh với BG_CONFIG_DIR tạm + secret giả có nhãn sealed-secrets-key: backup ghi key 0600 (dir 700, không để lại .tmp khi --fetch-cert lỗi vì chưa có controller), restore apply lại secret; arg sai → usage exit 2. make lint → exit 0. Lệch plan: thêm trap xóa file .tmp trong sealed-key.sh. Không có shellcheck trên máy (chỉ bash -n). [Sau review S1 (9a5ad59, T22): kind-down không còn '-' — backup chỉ khi cluster tồn tại, lỗi `kind get clusters`/backup thì dừng trước delete; sealed-key.sh luôn dùng --context kind-banking-go; chưa có key → exit 0 (post hook dùng --require-key).]"
     },
     {
       "id": "T9",
@@ -144,8 +144,8 @@
       "dependencies": [
         "T12"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (b59bee1): make kind-test → No rule; test-sealed-key.sh → \"FAIL: kind-down succeeded although 'kind get clusters' failed\"; check-platform với backup giả → exit 0; image-smoke → \"FAIL: web-customer: /config.js without a ConfigMap → 200, want 404\"; check-go-mod-tidy → \"FAIL: ./pkg is not tidy\". GREEN: make kind-test → 5 ok (backup/kind-ca theo context kind, kind-down dừng khi backup lỗi và khi listing lỗi, check-platform từ chối backup stale), \"kind-test: all checks passed\", exit 0; check-platform thật → \"ok   Sealed Secrets key backed up (matches the running key)\"; make kind-platform MAX_WAVE=-20 → post hook `backup --require-key` ghi backup, exit 0; scripts/check-go-mod-tidy.sh → 5 module tidy; make images-spa + image-smoke → \"ships no /config.js of its own\" cho 2 SPA, \"image-smoke: all images passed\"; make kind-load kind-apps + kind-smoke → all checks passed, https://app|admin.kind.localhost/config.js vẫn từ ConfigMap (env kind); make test exit 0; make lint exit 0; make helm-lint helm-test exit 0. R4: ghi chú vào evidence T8 + plan T8. Lệch plan: thêm scripts/check-go-mod-tidy.sh (kiểm F5 cho mọi module go.work)."
     },
     {
       "id": "T13",

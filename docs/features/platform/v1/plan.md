@@ -80,7 +80,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
 Sprint S2 — "Observability as code trên kind"
-- [ ] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`) — làm trước T13 (owner duyệt)
+- [x] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`) — làm trước T13 (owner duyệt)
 - [ ] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
 - [ ] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
 - [ ] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
@@ -2912,6 +2912,7 @@ Expected: lần 1 `creating cluster banking-go` … `ok   kind cluster banking-g
 
 Run: `make kind-down && make kind-up`
 Expected: kind-down in `[sealed-key] no controller key in kube-system yet` (chưa cài controller ở T8, được bỏ qua nhờ `-`), xóa cluster; kind-up dựng lại, exit 0.
+> Đã thay sau review S1 (9a5ad59 + T22): `kind-down` không còn `-`; backup chỉ khi `kind get clusters` liệt kê cluster, lỗi listing/backup → dừng trước `delete`; `sealed-key.sh` luôn dùng `--context kind-banking-go`; chưa có key → `[sealed-key] no controller key in kube-system yet: nothing to back up`, exit 0 (post hook T9 dùng `backup --require-key`).
 
 - [ ] **Step 8: Commit**
 
@@ -5781,7 +5782,7 @@ Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026
 - Consumes: `sealed-key.sh restore|backup`, `kind-down`, `kind-ca` (T8, sửa ở review S1 9a5ad59); `scripts/image-smoke.sh` (T3/T4).
 - Produces: `sealed-key.sh backup --require-key` (chưa có key → exit 1); target `make kind-test` (chạy `deploy/kind/test-sealed-key.sh`).
 
-- [ ] **Step 1: Test thất bại** — mở rộng `deploy/kind/test-sealed-key.sh` + `scripts/image-smoke.sh`:
+- [x] **Step 1: Test thất bại** — mở rộng `deploy/kind/test-sealed-key.sh` + `scripts/image-smoke.sh`:
   - R1: kind giả có `get clusters` exit 1 → `make kind-down` phải exit ≠ 0 và không gọi `delete`.
   - R2: chép một backup giả (key/cert khác key đang chạy) vào `BG_CONFIG_DIR` tạm → `deploy/kind/check-platform.sh` phải
     FAIL "Sealed Secrets backup is stale" (hiện chỉ kiểm file tồn tại nên pass).
@@ -5789,7 +5790,7 @@ Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026
   - F6: `image-smoke.sh` spa_check: container không mount ConfigMap → `GET /config.js` phải 404 (hiện trả file dev localhost).
   - F5: `cd pkg && go mod tidy -diff` phải rỗng (hiện khác).
   Chạy từng lệnh, xác nhận FAIL đúng lý do. Commit `test: platform T22 — …`.
-- [ ] **Step 2: Sửa**
+- [x] **Step 2: Sửa**
   - R1 `kind-down`: `clusters=$$($(KIND) get clusters)` (lỗi lan ra), rồi `grep -qx` → backup; backup lỗi → dừng trước `delete`.
   - R2 `sealed-key.sh backup --require-key`: chưa có key → exit 1; post hook sealed-secrets trong `deploy/argocd/kind/values.yaml`
     dùng `--require-key`; `check-platform.sh` kiểm backup khớp `tls.crt` của key đang chạy (không chỉ file tồn tại).
@@ -5797,9 +5798,9 @@ Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026
   - R4 thêm ghi chú vào evidence T8 (tasks.json) và Step `kind-down` của T8 (plan.md): hành vi `-` nuốt lỗi đã thay ở review S1 (9a5ad59).
   - F5 `cd pkg && GOWORK=off go mod tidy` (hoặc trong workspace nếu tidy cần) → `go mod tidy -diff` rỗng.
   - F6 `spa.Dockerfile` build stage: `rm -f apps/${APP}/dist/config.js` (file dev chỉ dùng cho `vite dev`); nginx trả 404 khi không mount.
-- [ ] **Step 3: Kiểm chứng** — `make kind-test`, `make images image-smoke`, `make kind-platform` (post hook) + `deploy/kind/check-platform.sh`,
+- [x] **Step 3: Kiểm chứng** — `make kind-test`, `make images image-smoke`, `make kind-platform` (post hook) + `deploy/kind/check-platform.sh`,
   `cd pkg && go mod tidy -diff`, `make test`, `make lint`; `make kind-load kind-apps kind-smoke` vẫn pass (SPA trên kind vẫn có config.js từ ConfigMap).
-- [ ] **Step 4: Commit** `feat(platform): T22 — review S1 follow-ups (kind-down, sealed key backup, kind-test, pkg tidy, SPA config.js)`
+- [x] **Step 4: Commit** `feat(platform): T22 — review S1 follow-ups (kind-down, sealed key backup, kind-test, pkg tidy, SPA config.js)`
 
 **Lệnh kiểm chứng:** `make kind-test && make image-smoke && deploy/kind/check-platform.sh && (cd pkg && go mod tidy -diff)`
 

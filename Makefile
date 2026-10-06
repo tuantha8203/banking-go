@@ -198,7 +198,8 @@ kind-up: tools-k8s ## Create/refresh the kind cluster (idempotent): k8s 1.36, re
 	deploy/kind/bootstrap.sh
 	deploy/kind/check-cluster.sh
 kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster (aborts if the backup fails)
-	if $(KIND) get clusters 2>/dev/null | grep -qx $(KIND_CLUSTER); then deploy/kind/sealed-key.sh backup; fi
+	clusters=$$($(KIND) get clusters 2>&1) || { echo "kind get clusters failed: $$clusters" >&2; exit 1; }; \
+	if grep -qx '$(KIND_CLUSTER)' <<<"$$clusters"; then deploy/kind/sealed-key.sh backup; fi
 	$(KIND) delete cluster --name $(KIND_CLUSTER)
 
 .PHONY: kind-platform kind-ca
@@ -221,7 +222,9 @@ kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.ya
 	IMAGE_PREFIX=$(IMAGE_PREFIX) IMAGE_TAG=$(IMAGE_TAG) scripts/kind-apps.sh
 	deploy/kind/check-apps.sh
 
-.PHONY: kind-smoke
+.PHONY: kind-smoke kind-test
+kind-test: tools-k8s ## Regression tests for the kind scripts (key backup, kind-ca, kind-down, check-platform); needs the kind cluster
+	deploy/kind/test-sealed-key.sh
 kind-smoke: tools-k8s ## Smoke the kind env: 4 hosts via Traefik, migration Jobs, running digests vs deploy/releases/kind.yaml
 	scripts/kind-smoke.sh
 
