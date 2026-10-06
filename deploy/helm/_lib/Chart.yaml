@@ -1,0 +1,5 @@
+apiVersion: v2
+name: lib
+description: The only Kubernetes templates of banking-go deployables (spec platform v1 §6). Thin charts include "lib.all".
+type: library
+version: 0.1.0

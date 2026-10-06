@@ -70,7 +70,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [x] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
 - [x] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
-- [ ] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
+- [x] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 - [ ] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [ ] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
 - [ ] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
@@ -1302,7 +1302,7 @@ git commit -m "feat(platform): nginx-unprivileged SPA images with runtime config
 - Consumes: `bin/helm` + plugin unittest (T1); `/usr/local/bin/<cmd>`, port, `/livez` `/readyz`, `/healthz` (T3/T4).
 - Produces: library chart `lib` 0.1.0 (`file://../_lib`), template `lib.all` (thin chart chỉ cần `{{ include "lib.all" . }}`), helper `lib.name`, `lib.labels`, `lib.selectorLabels`, `lib.envPrefix` (`BG_<SVC>_`), `lib.image`; values đọc: `global.{ghOwner,imagePullSecrets,otelEndpoint,gateway}`, `image.{repository,digest,tag,pullPolicy}`, `command`, `ports.{app,admin}`, `replicas`, `resources`, `env` (map), `envFromSecrets` (list tên Secret), `configFiles` (map `<file>: {mountPath, content}`), `secretsRevision`, `shutdownTimeoutSeconds`; key `<deployable>: {image, digest}` từ file releases. Thứ tự image: releases file → `image.digest` → `image.tag`.
 
-- [ ] **Step 1: Fixture chart + test thất bại**
+- [x] **Step 1: Fixture chart + test thất bại**
 
 `deploy/helm/_libtest/Chart.yaml`:
 ```yaml
@@ -1381,7 +1381,7 @@ tests:
       image.repository: banking-go/libtest
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].image, value: "banking-go/libtest:local"}
+      - equal: {path: "spec.template.spec.containers[0].image", value: "banking-go/libtest:local"}
   - it: fails without a digest or a tag
     set:
       image.tag: ""
@@ -1400,30 +1400,30 @@ tests:
       - equal: {path: spec.minReadySeconds, value: 10}
       - equal: {path: spec.progressDeadlineSeconds, value: 300}
       - equal: {path: spec.template.spec.terminationGracePeriodSeconds, value: 45}
-      - equal: {path: spec.template.spec.containers[0].lifecycle.preStop.sleep.seconds, value: 5}
+      - equal: {path: "spec.template.spec.containers[0].lifecycle.preStop.sleep.seconds", value: 5}
       - contains:
           path: spec.template.spec.containers[0].env
           content: {name: BG_LIBTEST_SHUTDOWN_TIMEOUT, value: "30s"}
   - it: probes /livez and /readyz on the admin port
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].livenessProbe.httpGet.path, value: /livez}
-      - equal: {path: spec.template.spec.containers[0].livenessProbe.httpGet.port, value: admin}
-      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.path, value: /readyz}
+      - equal: {path: "spec.template.spec.containers[0].livenessProbe.httpGet.path", value: /livez}
+      - equal: {path: "spec.template.spec.containers[0].livenessProbe.httpGet.port", value: admin}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.path", value: /readyz}
   - it: probes /healthz on the app port when there is no admin port (SPA)
     set:
       ports.admin: null
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.path, value: /healthz}
-      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.port, value: app}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.path", value: /healthz}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.port", value: app}
   - it: runs non-root with a read-only root filesystem and a writable /tmp
     documentSelector: {path: kind, value: Deployment}
     asserts:
       - equal: {path: spec.template.spec.securityContext.runAsNonRoot, value: true}
-      - equal: {path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem, value: true}
-      - equal: {path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation, value: false}
-      - equal: {path: spec.template.spec.containers[0].securityContext.capabilities.drop, value: [ALL]}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation", value: false}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.capabilities.drop", value: [ALL]}
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content: {name: tmp, mountPath: /tmp}
@@ -1445,7 +1445,7 @@ tests:
   - it: uses the command and both container ports
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].command, value: [/usr/local/bin/libtest]}
+      - equal: {path: "spec.template.spec.containers[0].command", value: [/usr/local/bin/libtest]}
       - contains:
           path: spec.template.spec.containers[0].ports
           content: {name: app, containerPort: 8081}
@@ -1497,7 +1497,7 @@ tests:
       - equal: {path: "data[\"config.js\"]", value: "window.__BG_CONFIG__ = { env: 'kind' }"}
 ```
 
-- [ ] **Step 2: Makefile + .gitignore** — thêm vào `.gitignore`:
+- [x] **Step 2: Makefile + .gitignore** — thêm vào `.gitignore`:
 
 ```text
 # Helm dependency build output (lib chart is a file:// dependency)
@@ -1511,16 +1511,16 @@ Thêm vào `Makefile` sau khối Images:
 .PHONY: helm-test
 helm-test: tools-k8s ## helm-unittest: lib fixture chart + every chart with tests/
 	@for c in deploy/helm/_libtest $(filter-out deploy/helm/_%,$(wildcard deploy/helm/*)); do \
-		if [ -d $$c/tests ]; then echo "== $$c"; $(HELM) dependency build $$c >/dev/null && $(HELM) unittest $$c; fi; \
+		if [ -d $$c/tests ]; then echo "== $$c"; { $(HELM) dependency build $$c >/dev/null && $(HELM) unittest $$c; } || exit 1; fi; \
 	done
 ```
 
-- [ ] **Step 3: Chạy để thấy fail**
+- [x] **Step 3: Chạy để thấy fail**
 
 Run: `make helm-test`
 Expected: FAIL — `directory ../_lib not found` (lib chưa có).
 
-- [ ] **Step 4: Implement lib**
+- [x] **Step 4: Implement lib**
 
 `deploy/helm/_lib/Chart.yaml`:
 ```yaml
@@ -1790,12 +1790,12 @@ spec:
 {{- end -}}
 ```
 
-- [ ] **Step 5: Chạy test pass**
+- [x] **Step 5: Chạy test pass**
 
 Run: `make helm-test`
 Expected: `Charts: 1 passed, 1 total`, `Test Suites: 2 passed`, `Tests: 16 passed`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add deploy/helm/_lib deploy/helm/_libtest .gitignore Makefile

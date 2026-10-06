@@ -62,8 +62,8 @@
       "dependencies": [
         "T1"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make helm-test → Charts: 1 passed, Test Suites: 2 passed, Tests: 16 passed (0.05s); mutation check (maxUnavailable 1, /readyz→/ready) → 2 failed rồi khôi phục; helm lint _libtest → 0 failed; make lint → exit 0. Ghi chú: test từ plan có 11 path [0] không quote trong flow mapping (YAML lỗi) → đã quote, không đổi assertion; helm-test loop thêm '|| exit 1' (fail-fast)."
     },
     {
       "id": "T6",

@@ -25,7 +25,7 @@ tests:
       image.repository: banking-go/libtest
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].image, value: "banking-go/libtest:local"}
+      - equal: {path: "spec.template.spec.containers[0].image", value: "banking-go/libtest:local"}
   - it: fails without a digest or a tag
     set:
       image.tag: ""
@@ -44,30 +44,30 @@ tests:
       - equal: {path: spec.minReadySeconds, value: 10}
       - equal: {path: spec.progressDeadlineSeconds, value: 300}
       - equal: {path: spec.template.spec.terminationGracePeriodSeconds, value: 45}
-      - equal: {path: spec.template.spec.containers[0].lifecycle.preStop.sleep.seconds, value: 5}
+      - equal: {path: "spec.template.spec.containers[0].lifecycle.preStop.sleep.seconds", value: 5}
       - contains:
           path: spec.template.spec.containers[0].env
           content: {name: BG_LIBTEST_SHUTDOWN_TIMEOUT, value: "30s"}
   - it: probes /livez and /readyz on the admin port
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].livenessProbe.httpGet.path, value: /livez}
-      - equal: {path: spec.template.spec.containers[0].livenessProbe.httpGet.port, value: admin}
-      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.path, value: /readyz}
+      - equal: {path: "spec.template.spec.containers[0].livenessProbe.httpGet.path", value: /livez}
+      - equal: {path: "spec.template.spec.containers[0].livenessProbe.httpGet.port", value: admin}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.path", value: /readyz}
   - it: probes /healthz on the app port when there is no admin port (SPA)
     set:
       ports.admin: null
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.path, value: /healthz}
-      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.port, value: app}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.path", value: /healthz}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.port", value: app}
   - it: runs non-root with a read-only root filesystem and a writable /tmp
     documentSelector: {path: kind, value: Deployment}
     asserts:
       - equal: {path: spec.template.spec.securityContext.runAsNonRoot, value: true}
-      - equal: {path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem, value: true}
-      - equal: {path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation, value: false}
-      - equal: {path: spec.template.spec.containers[0].securityContext.capabilities.drop, value: [ALL]}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation", value: false}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.capabilities.drop", value: [ALL]}
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content: {name: tmp, mountPath: /tmp}
@@ -89,7 +89,7 @@ tests:
   - it: uses the command and both container ports
     documentSelector: {path: kind, value: Deployment}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].command, value: [/usr/local/bin/libtest]}
+      - equal: {path: "spec.template.spec.containers[0].command", value: [/usr/local/bin/libtest]}
       - contains:
           path: spec.template.spec.containers[0].ports
           content: {name: app, containerPort: 8081}

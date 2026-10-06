@@ -1,11 +1,10 @@
 # Board — platform v1 — sprint S1
 
-Tiến độ: **4/12 done** · 0 doing · 0 blocked · 0 dropped
+Tiến độ: **5/12 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Doing
 
 ## Todo
-- [ ] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 - [ ] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [ ] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
 - [ ] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
@@ -21,6 +20,7 @@ Tiến độ: **4/12 done** · 0 doing · 0 blocked · 0 dropped
 - [x] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [x] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
 - [x] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
+- [x] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 
 ## Dropped
 
