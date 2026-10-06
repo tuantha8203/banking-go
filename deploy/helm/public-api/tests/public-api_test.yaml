@@ -23,14 +23,16 @@ tests:
   - it: routes api.kind.localhost to the HTTP port
     set:
       image.tag: local
+      global.ghOwner: acme
     documentSelector: {path: kind, value: HTTPRoute}
     asserts:
       - equal: {path: spec.hostnames, value: [api.kind.localhost]}
-      - equal: {path: spec.rules[0].backendRefs[0].port, value: 8081}
+      - equal: {path: "spec.rules[0].backendRefs[0].port", value: 8081}
   - it: migrates with public-api migrate up and the migrator DSN secret
     set:
       image.tag: local
+      global.ghOwner: acme
     documentSelector: {path: kind, value: Job}
     asserts:
-      - equal: {path: spec.template.spec.containers[0].command, value: [/usr/local/bin/public-api, migrate, up]}
-      - equal: {path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name, value: public-api-migrator-dsn}
+      - equal: {path: "spec.template.spec.containers[0].command", value: [/usr/local/bin/public-api, migrate, up]}
+      - equal: {path: "spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name", value: public-api-migrator-dsn}

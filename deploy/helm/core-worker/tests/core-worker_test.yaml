@@ -12,10 +12,11 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].image
           value: ghcr.io/acme/banking-go/core@sha256:5555555555555555555555555555555555555555555555555555555555555555
-      - equal: {path: spec.template.spec.containers[0].command, value: [/usr/local/bin/core-worker]}
-      - equal: {path: spec.template.spec.containers[0].ports, value: [{name: admin, containerPort: 9191}]}
+      - equal: {path: "spec.template.spec.containers[0].command", value: [/usr/local/bin/core-worker]}
+      - equal: {path: "spec.template.spec.containers[0].ports", value: [{name: admin, containerPort: 9191}]}
   - it: has no route and no migration (core migrates the shared database)
     set:
       image.tag: local
+      global.ghOwner: acme
     asserts:
       - hasDocuments: {count: 3}
