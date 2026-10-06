@@ -65,6 +65,8 @@ done
 ok "Jaeger has $spans public-api span(s)"
 rps=0
 for _ in $(seq 36); do
+  # keep traffic flowing: after a fresh rollout the first export already holds the burst above, and rate() needs an increase
+  for _ in $(seq 5); do curl -sk -o /dev/null --max-time 5 https://api.kind.localhost/v1/ping; done
   rps=$(prom_value 'sum(rate(http_server_request_duration_seconds_count{service_name="public-api"}[5m]))')
   awk -v v="$rps" 'BEGIN{exit !(v > 0)}' && break; sleep 5
 done

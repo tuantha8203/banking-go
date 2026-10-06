@@ -1,3 +1,5 @@
 # env kind (ADR 0011).
+global:
+  otelEndpoint: http://otel-collector.observability.svc:4317
 env:
   BG_MOCK_EKYC_ENVIRONMENT: kind

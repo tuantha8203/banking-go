@@ -81,7 +81,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 
 Sprint S2 — "Observability as code trên kind"
 - [x] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`) — làm trước T13 (owner duyệt)
-- [ ] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
+- [x] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
 - [ ] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
 - [ ] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
 - [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
@@ -4070,7 +4070,7 @@ git commit -m "feat(platform): kind smoke test through traefik with digest check
 - Consumes: catalog + `kind-platform.sh` (T9), Gateway + `kind-ca` (T9), `global.otelEndpoint` của lib (T5), app đang chạy (T11), smoke (T12).
 - Produces: addon `prometheus-operator-crds` (chart 32.0.1, wave -30); Prometheus `monitoring/kube-prometheus-stack-prometheus:9090` (remote-write receiver, external label `env=kind`, chọn mọi `PrometheusRule`/`ServiceMonitor`/`PodMonitor`), Alertmanager `…-alertmanager:9093`, Grafana 12.4.12 `…-grafana:80` (datasource uid `prom`, Jaeger uid `traces`, sidecar dashboard label `grafana_dashboard: "1"`), Jaeger `observability/jaeger:{4317,16686}`, Collector `observability/otel-collector:4317` (job metric `otel-collector`); host `grafana.`, `jaeger.`, `argocd.`, `rabbitmq.kind.localhost`; hàm `svc_get <ns> <svc:port> <path>`, `prom <promql>`, `prom_value <promql>`; target `make collector-validate`.
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 `scripts/collector-validate.sh`:
 ```bash
@@ -4138,7 +4138,7 @@ done
 Run: `chmod +x scripts/collector-validate.sh && scripts/collector-validate.sh; make kind-smoke`
 Expected: collector-validate lỗi `yq: … no such file deploy/collector/kind.yaml`; kind-smoke `svc_get: command not found` → FAIL.
 
-- [ ] **Step 2: Helper** — thêm vào `scripts/lib/kind.sh`:
+- [x] **Step 2: Helper** — thêm vào `scripts/lib/kind.sh`:
 
 ```bash
 # svc_get <namespace> <service:port> <path?query>: GET through the API server service proxy (no port-forward).
@@ -4151,7 +4151,7 @@ prom() { svc_get monitoring kube-prometheus-stack-prometheus:9090 "/api/v1/query
 prom_value() { prom "$1" | jq -r '.data.result[0].value[1] // "0"'; }
 ```
 
-- [ ] **Step 3: Values observability**
+- [x] **Step 3: Values observability**
 
 `deploy/platform/kube-prometheus-stack/values-kind.yaml`:
 ```yaml
@@ -4426,7 +4426,7 @@ collector-validate: tools-k8s ## Validate deploy/collector/kind.yaml with the pi
 	scripts/collector-validate.sh
 ```
 
-- [ ] **Step 4: Validate + cài + smoke**
+- [x] **Step 4: Validate + cài + smoke**
 
 Run: `make collector-validate`
 Expected: `ok   collector config valid (otel/opentelemetry-collector-contrib:0.162.0)`. Nếu `validate` báo key/alias không hợp lệ (vd. `blocked_key_patterns`, exporter `otlp`), sửa theo thông báo của chính binary 0.162.0 rồi chạy lại.
@@ -4434,7 +4434,7 @@ Expected: `ok   collector config valid (otel/opentelemetry-collector-contrib:0.1
 Run: `make kind-platform && make kind-apps && make kind-smoke`
 Expected: `== wave -30: prometheus-operator-crds` chạy trước cert-manager (ServiceMonitor được tạo ở wave -20); check-platform in `ok   Grafana 12.4.12`, 4 host vận hành `→ 200|302`; kind-smoke thêm `ok   Jaeger has N public-api span(s)` và `ok   Prometheus RED rate public-api = … req/s` (`make kind-apps` để pod nhận `OTEL_EXPORTER_OTLP_ENDPOINT`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add deploy/platform deploy/collector deploy/argocd/kind/values.yaml deploy/helm/*/values-kind.yaml scripts/lib/kind.sh scripts/kind-smoke.sh \

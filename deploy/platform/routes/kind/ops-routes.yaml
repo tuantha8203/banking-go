@@ -1,0 +1,32 @@
+# Ops UIs on kind (spec "Thiết kế" hosts). Each route lives next to its backend (no ReferenceGrant needed).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: {name: grafana, namespace: monitoring}
+spec:
+  parentRefs: [{name: traefik-gateway, namespace: traefik, sectionName: websecure}]
+  hostnames: [grafana.kind.localhost]
+  rules: [{backendRefs: [{name: kube-prometheus-stack-grafana, port: 80}]}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: {name: jaeger, namespace: observability}
+spec:
+  parentRefs: [{name: traefik-gateway, namespace: traefik, sectionName: websecure}]
+  hostnames: [jaeger.kind.localhost]
+  rules: [{backendRefs: [{name: jaeger, port: 16686}]}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: {name: argocd, namespace: argocd}
+spec:
+  parentRefs: [{name: traefik-gateway, namespace: traefik, sectionName: websecure}]
+  hostnames: [argocd.kind.localhost]
+  rules: [{backendRefs: [{name: argocd-server, port: 80}]}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: {name: rabbitmq, namespace: banking-data}
+spec:
+  parentRefs: [{name: traefik-gateway, namespace: traefik, sectionName: websecure}]
+  hostnames: [rabbitmq.kind.localhost]
+  rules: [{backendRefs: [{name: rmq, port: 15672}]}]

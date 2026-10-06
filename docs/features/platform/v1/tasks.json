@@ -154,8 +154,8 @@
       "dependencies": [
         "T12"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (84a8d9f): collector-validate → no such file deploy/collector/kind.yaml; kind-smoke → \"FAIL: no public-api trace in Jaeger\"; check-platform → namespaces \"monitoring\" not found. GREEN: make collector-validate → \"ok   collector config valid (otel/opentelemetry-collector-contrib:0.162.0)\"; make helm-lint helm-test exit 0; make kind-platform → wave -30 prometheus-operator-crds trước cert-manager, wave -10 kube-prometheus-stack/jaeger/otel-collector/ops-routes, check-platform: grafana/operator/jaeger/otel-collector ok, \"ok   Grafana 12.4.12\", grafana → 302, jaeger/argocd/rabbitmq → 200, exit 0; make kind-apps → pod có OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability.svc:4317; make kind-smoke → \"ok   Jaeger has N public-api span(s)\", \"ok   Prometheus RED rate public-api = 0.31 req/s\", all checks passed (cả ngay sau rollout restart public-api); make lint/test/kind-test exit 0. Sửa test: lần chạy đầu sau kind-apps FAIL \"Prometheus RED rate for public-api is 0\" vì cả loạt 20 request nằm trong lần export đầu (counter xuất hiện = 21 rồi đứng yên → rate 0); vòng chờ RED nay gửi thêm 5 request mỗi lần thử (assertion giữ nguyên rate > 0). Rủi ro: máy 15.4 GiB RAM + VS Code/Chrome/Discord/mongod → swap đầy, load ~98, kube-apiserver restart, controller CrashLoopBackOff ~2 phút rồi tự hồi; stack observability làm kind cần thêm RAM. Collector 0.162.0 cảnh báo alias deprecated: prometheusremotewrite → prometheus_remote_write, resource_to_telemetry_conversion → resource_constant_labels (vẫn chạy)."
     },
     {
       "id": "T14",

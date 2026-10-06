@@ -222,6 +222,10 @@ kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.ya
 	IMAGE_PREFIX=$(IMAGE_PREFIX) IMAGE_TAG=$(IMAGE_TAG) scripts/kind-apps.sh
 	deploy/kind/check-apps.sh
 
+.PHONY: collector-validate
+collector-validate: tools-k8s ## Validate deploy/collector/kind.yaml with the pinned otelcol-contrib image (needs Docker)
+	scripts/collector-validate.sh
+
 .PHONY: kind-smoke kind-test
 kind-test: tools-k8s ## Regression tests for the kind scripts (key backup, kind-ca, kind-down, check-platform); needs the kind cluster
 	deploy/kind/test-sealed-key.sh

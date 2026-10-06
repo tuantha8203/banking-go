@@ -16,4 +16,4 @@ cainjector:
 prometheus:
   enabled: true
   servicemonitor:
-    enabled: false   # T13 turns it on once the ServiceMonitor CRD exists
+    enabled: true    # ServiceMonitor CRD comes from the prometheus-operator-crds addon (wave -30)

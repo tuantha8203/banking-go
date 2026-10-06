@@ -13,6 +13,10 @@ addons:
     wave: -30
     path: deploy/platform/gateway-api
     wait: "--for=condition=Established crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=120s"
+  - name: prometheus-operator-crds
+    wave: -30
+    namespace: monitoring
+    chart: {repo: https://prometheus-community.github.io/helm-charts, name: prometheus-operator-crds, version: 32.0.1}
   - name: cert-manager
     wave: -20
     namespace: cert-manager
@@ -68,3 +72,21 @@ addons:
     wave: -14
     path: deploy/messaging
     wait: "-n banking-data --for=condition=Ready exchanges.rabbitmq.com --all --timeout=300s"
+  - name: kube-prometheus-stack
+    wave: -10
+    namespace: monitoring
+    chart: {repo: https://prometheus-community.github.io/helm-charts, name: kube-prometheus-stack, version: 91.9.0}
+    values: [deploy/platform/kube-prometheus-stack/values-kind.yaml]
+  - name: jaeger
+    wave: -10
+    namespace: observability
+    chart: {repo: https://jaegertracing.github.io/helm-charts, name: jaeger, version: 4.14.1}
+    values: [deploy/platform/jaeger/values-kind.yaml]
+  - name: otel-collector
+    wave: -10
+    namespace: observability
+    chart: {repo: https://open-telemetry.github.io/opentelemetry-helm-charts, name: opentelemetry-collector, version: 0.175.1}
+    values: [deploy/collector/kind.yaml]
+  - name: ops-routes
+    wave: -10
+    path: deploy/platform/routes/kind
