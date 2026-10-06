@@ -51,4 +51,23 @@ if [[ -f $RELEASES ]]; then
 else
   echo "skip digest check: $RELEASES not found (bg-release-bot writes it from main.yml, S3/T19)"
 fi
+
+# 5. Telemetry (spec criterion 5): traffic → trace in Jaeger + RED metric in Prometheus
+for _ in $(seq 20); do curl -sk -o /dev/null --max-time 5 https://api.kind.localhost/v1/ping; done
+start=$(date -u -d '-15 min' +%Y-%m-%dT%H:%M:%SZ); end=$(date -u -d '+1 min' +%Y-%m-%dT%H:%M:%SZ)
+spans=0
+for _ in $(seq 36); do
+  spans=$(svc_get observability jaeger:16686 "/api/v3/traces?query.service_name=public-api&query.start_time_min=$start&query.start_time_max=$end" 2>/dev/null \
+    | jq '[.. | objects | .spans? // empty | .[]] | length' 2>/dev/null || echo 0)
+  [[ $spans -gt 0 ]] && break; sleep 5
+done
+[[ $spans -gt 0 ]] || fail "no public-api trace in Jaeger (/api/v3/traces)"
+ok "Jaeger has $spans public-api span(s)"
+rps=0
+for _ in $(seq 36); do
+  rps=$(prom_value 'sum(rate(http_server_request_duration_seconds_count{service_name="public-api"}[5m]))')
+  awk -v v="$rps" 'BEGIN{exit !(v > 0)}' && break; sleep 5
+done
+awk -v v="$rps" 'BEGIN{exit !(v > 0)}' || fail "Prometheus RED rate for public-api is 0"
+ok "Prometheus RED rate public-api = $rps req/s"
 echo "kind-smoke: all checks passed"

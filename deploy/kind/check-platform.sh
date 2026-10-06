@@ -60,3 +60,17 @@ pod=$(kubectl -n banking-data get pods -l app.kubernetes.io/name=seaweedfs -o na
 kubectl -n banking-data exec "$pod" -- sh -c 'echo s3.bucket.list | weed shell' 2>/dev/null | grep -q banking-kind \
   || fail "SeaweedFS bucket banking-kind missing"
 ok "seaweedfs bucket banking-kind"
+
+# --- wave -10: observability
+for d in monitoring/kube-prometheus-stack-grafana monitoring/kube-prometheus-stack-operator observability/jaeger observability/otel-collector; do
+  kubectl -n "${d%%/*}" rollout status "deploy/${d#*/}" --timeout=300s >/dev/null || fail "deployment $d not available"
+  ok "deployment $d"
+done
+[[ $(kubectl -n monitoring get prometheus kube-prometheus-stack-prometheus -o jsonpath='{.spec.enableRemoteWriteReceiver}') == true ]] \
+  || fail "Prometheus remote-write receiver disabled"
+gv=$(svc_get monitoring kube-prometheus-stack-grafana:80 /api/health | jq -r .version)
+[[ $gv == 12.4.* ]] || fail "Grafana version $gv (want 12.4.x)"; ok "Grafana $gv"
+for h in grafana jaeger argocd rabbitmq; do
+  code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://$h.kind.localhost/")
+  [[ $code =~ ^(200|301|302)$ ]] || fail "https://$h.kind.localhost → $code"; ok "https://$h.kind.localhost → $code"
+done
