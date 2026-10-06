@@ -61,12 +61,12 @@ observability.md cho env `kind`.
 - Interface chart (`values.yaml` của từng deployable): `image.repository`, `command`, `ports.app`, `ports.admin`,
   `replicas`, `resources`, `env`, `envFromSecrets`, `route.{enabled,host,pathPrefix}`, `migration.{enabled,dsnSecret}`,
   `mtls.enabled`, `shutdownTimeoutSeconds`. Digest: `image.digest` từ `deploy/releases/<env>.yaml` (khóa = tên deployable).
-- `deploy/releases/kind.yaml`: `{ <deployable>: { image: ghcr.io/<owner>/banking-go/<image>, digest: sha256:… } }`.
+- `deploy/releases/kind.yaml`: `{ <deployable>: { image: ghcr.io/<GH_OWNER>/banking-go/<image>, digest: sha256:… } }`. `GH_OWNER` (owner repo GitHub, chưa chốt) là biến duy nhất: Makefile, values `global.ghOwner`, `repoURL` của Argo CD đều đọc từ nó.
 - Host trên kind: `api.`, `admin-api.`, `app.`, `admin.`, `grafana.`, `jaeger.`, `argocd.`, `rabbitmq.` + `.kind.localhost`.
 
 ## Tiêu chí hoàn thành (mỗi tiêu chí kiểm bằng lệnh)
 1. `make kind-up` exit 0 trên máy sạch; `kubectl -n argocd get applications` toàn `Synced`/`Healthy`.
-2. Commit lên `main` → `gh run watch` cho `main.yml` xanh; `cosign verify --certificate-identity-regexp … ghcr.io/<owner>/banking-go/<image>@<digest>`
+2. Commit lên `main` → `gh run watch` cho `main.yml` xanh; `cosign verify --certificate-identity-regexp … ghcr.io/<GH_OWNER>/banking-go/<image>@<digest>`
    đạt cho 6 image; `cosign verify-attestation --type spdxjson` đạt; có commit bot `chore(release): kind <sha>`.
 3. Argo CD sync digest mới; Job migration `Completed`; `make kind-smoke` exit 0: `curl -k https://api.kind.localhost/v1/ping`
    và `https://admin-api.kind.localhost/v1/ping` → 200 `{"status":"ok"}`; `app.` và `admin.` → 200 HTML; digest đang chạy

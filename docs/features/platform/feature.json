@@ -4,6 +4,9 @@
   "current": null,
   "working": "v1",
   "versions": {
-    "v1": { "status": "draft", "summary": "Đóng gói + pipeline, Helm + GitOps, observability as code; kiểm chứng trên cluster local" }
+    "v1": {
+      "status": "in-progress",
+      "summary": "Đóng gói + pipeline, Helm + GitOps, observability as code; kiểm chứng trên cluster local"
+    }
   }
 }

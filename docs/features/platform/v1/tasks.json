@@ -1,0 +1,238 @@
+{
+  "feature": "platform",
+  "version": "v1",
+  "sprints": [
+    {
+      "id": "S1",
+      "goal": "Image + chart chạy trên kind (cài bằng helm trực tiếp, chưa cần GitHub)",
+      "status": "active"
+    },
+    {
+      "id": "S2",
+      "goal": "Observability as code trên kind: trace + RED + alert + dashboard + Telegram + runbook",
+      "status": "planned"
+    },
+    {
+      "id": "S3",
+      "goal": "GitOps + pipeline thật (repo GitHub): CI, main.yml ký + bump digest, rollback, app-of-apps, nghiệm thu",
+      "status": "planned"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "sprint": "S1",
+      "name": "Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T2",
+      "sprint": "S1",
+      "name": "Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T3",
+      "sprint": "S1",
+      "name": "Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`",
+      "dependencies": [
+        "T2"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T4",
+      "sprint": "S1",
+      "name": "Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)",
+      "dependencies": [
+        "T3"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T5",
+      "sprint": "S1",
+      "name": "Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest",
+      "dependencies": [
+        "T1"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T6",
+      "sprint": "S1",
+      "name": "Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest",
+      "dependencies": [
+        "T5"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T7",
+      "sprint": "S1",
+      "name": "10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)",
+      "dependencies": [
+        "T6",
+        "T4"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T8",
+      "sprint": "S1",
+      "name": "kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`",
+      "dependencies": [
+        "T1"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T9",
+      "sprint": "S1",
+      "name": "Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`",
+      "dependencies": [
+        "T8"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T10",
+      "sprint": "S1",
+      "name": "Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`",
+      "dependencies": [
+        "T9"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T11",
+      "sprint": "S1",
+      "name": "`make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed",
+      "dependencies": [
+        "T7",
+        "T10"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T12",
+      "sprint": "S1",
+      "name": "`make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)",
+      "dependencies": [
+        "T11"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T13",
+      "sprint": "S2",
+      "name": "kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry",
+      "dependencies": [
+        "T12"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T14",
+      "sprint": "S2",
+      "name": "Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra",
+      "dependencies": [
+        "T13"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T15",
+      "sprint": "S2",
+      "name": "Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test",
+      "dependencies": [
+        "T14"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T16",
+      "sprint": "S2",
+      "name": "Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test",
+      "dependencies": [
+        "T14",
+        "T10"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T17",
+      "sprint": "S2",
+      "name": "Runbook + `make kind-watch`",
+      "dependencies": [
+        "T14"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T18",
+      "sprint": "S3",
+      "name": "`ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint",
+      "dependencies": [
+        "T7",
+        "T15",
+        "T16",
+        "T17"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T19",
+      "sprint": "S3",
+      "name": "`main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`",
+      "dependencies": [
+        "T18"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T20",
+      "sprint": "S3",
+      "name": "`rollback.yml` (env=kind, revert_sha)",
+      "dependencies": [
+        "T19"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T21",
+      "sprint": "S3",
+      "name": "Argo CD app-of-apps `deploy/argocd/kind/` + bootstrap GitOps + nghiệm thu tiêu chí 1–6",
+      "dependencies": [
+        "T19",
+        "T20",
+        "T12",
+        "T16"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    }
+  ]
+}
