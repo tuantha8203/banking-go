@@ -57,6 +57,14 @@ spa_check() { # spa_check <deployable> <image>
   curl -fsSI "$base/" | grep -qi "^content-security-policy: .*connect-src 'self' https://api.smoke.test" || fail "$name: CSP connect-src"
   docker rm -f "$cid" >/dev/null; rm -rf "$dir"
   ok "$name ($ref) nginx: SPA, config.js, cache headers, CSP"
+  # No ConfigMap mounted → no /config.js: the image must not ship the dev config (localhost API) (review S1 F6)
+  cid=$(docker run -d --read-only --tmpfs /tmp:rw,mode=1777 -p 127.0.0.1::8080 "$ref"); CIDS+=("$cid")
+  port=$(host_port "$cid" 8080); base="http://127.0.0.1:$port"
+  wait_http "$base/healthz" >/dev/null || { docker logs "$cid" >&2; fail "$name: /healthz not ready (no config mount)"; }
+  code=$(curl -s -o /dev/null -w '%{http_code}' "$base/config.js")
+  [[ $code == 404 ]] || fail "$name: /config.js without a ConfigMap → $code, want 404 (dev config.js baked into the image)"
+  docker rm -f "$cid" >/dev/null
+  ok "$name ($ref) ships no /config.js of its own"
 }
 
 while read -r name image cmd _app admin; do
