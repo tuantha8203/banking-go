@@ -78,3 +78,4 @@ Core banking tối giản chuẩn kỹ thuật production (học + portfolio, kh
 - Migration đã có trên main: không sửa, tạo file mới (hook chặn).
 - kind cần cổng 80/443 trống trên host và ~6–7 GB RAM; `*.kind.localhost` tự trỏ 127.0.0.1 (curl/trình duyệt), CA: `make kind-ca`.
 - S1/S2 cài kind bằng helm/kubectl trực tiếp (`kind-platform`, `kind-apps`) — đường tạm chỉ cho kind, S3 chuyển sang Argo CD.
+- Script kind kiểm kubectl context một lần lúc bắt đầu: KHÔNG đổi context (`kubectl config use-context`) ở terminal khác khi `kind-platform`/`kind-apps` đang chạy.

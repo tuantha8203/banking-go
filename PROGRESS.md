@@ -28,6 +28,7 @@
 - Không có.
 
 ## Ghi chú cho phiên sau
+- Hoãn (review platform S1, N1): test `lock_timeout=5s` + advisory lock của `pkg/migrate` — làm khi có migration thật đầu tiên.
 - BMAD tắt trong settings dự án; bật lại qua /plugin khi chạy /foundation (config ở _bmad/, output docs/foundation/_bmad/).
 - Plugin Superpowers user-level bị tắt trong dự án; bản copy lẻ ở .claude/vendor/superpowers/.
 - Open Code Review chạy chế độ delegate (`/open-code-review:delegate-review`), không cần API key.

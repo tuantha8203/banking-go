@@ -85,6 +85,7 @@ Sprint S2 — "Observability as code trên kind"
 - [ ] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
 - [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
 - [ ] T17: Runbook + `make kind-watch`
+- [ ] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`)
 
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
 - [ ] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
@@ -5764,6 +5765,46 @@ git commit -m "docs(platform): runbooks for v1 alerts and kind post-deploy watch
 
 ---
 
+### T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6)
+
+Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026-10-06. N1 (test `lock_timeout`/advisory lock của
+`pkg/migrate`) hoãn tới migration thật đầu tiên; F2 bỏ qua (ghi Gotchas trong `CLAUDE.md`); F3 sửa ở plan T21.
+
+**Files:**
+- Modify: `Makefile` (`kind-down`, target mới `kind-test`), `deploy/kind/sealed-key.sh`, `deploy/kind/test-sealed-key.sh`,
+  `deploy/argocd/kind/values.yaml` (post hook sealed-secrets), `deploy/kind/check-platform.sh`
+- Modify: `pkg/go.mod`, `pkg/go.sum` (qua `go mod tidy`, không sửa tay)
+- Modify: `deploy/docker/spa.Dockerfile`, `scripts/image-smoke.sh`
+- Modify: `docs/features/platform/v1/tasks.json` (ghi chú T8), `docs/features/platform/v1/plan.md` (T8 Step kind-down)
+
+**Interfaces:**
+- Consumes: `sealed-key.sh restore|backup`, `kind-down`, `kind-ca` (T8, sửa ở review S1 9a5ad59); `scripts/image-smoke.sh` (T3/T4).
+- Produces: `sealed-key.sh backup --require-key` (chưa có key → exit 1); target `make kind-test` (chạy `deploy/kind/test-sealed-key.sh`).
+
+- [ ] **Step 1: Test thất bại** — mở rộng `deploy/kind/test-sealed-key.sh` + `scripts/image-smoke.sh`:
+  - R1: kind giả có `get clusters` exit 1 → `make kind-down` phải exit ≠ 0 và không gọi `delete`.
+  - R2: chép một backup giả (key/cert khác key đang chạy) vào `BG_CONFIG_DIR` tạm → `deploy/kind/check-platform.sh` phải
+    FAIL "Sealed Secrets backup is stale" (hiện chỉ kiểm file tồn tại nên pass).
+  - R3: test gọi `make … KIND_CLUSTER="$KIND_CLUSTER"`; `make kind-test` chưa có → `No rule to make target 'kind-test'`.
+  - F6: `image-smoke.sh` spa_check: container không mount ConfigMap → `GET /config.js` phải 404 (hiện trả file dev localhost).
+  - F5: `cd pkg && go mod tidy -diff` phải rỗng (hiện khác).
+  Chạy từng lệnh, xác nhận FAIL đúng lý do. Commit `test: platform T22 — …`.
+- [ ] **Step 2: Sửa**
+  - R1 `kind-down`: `clusters=$$($(KIND) get clusters)` (lỗi lan ra), rồi `grep -qx` → backup; backup lỗi → dừng trước `delete`.
+  - R2 `sealed-key.sh backup --require-key`: chưa có key → exit 1; post hook sealed-secrets trong `deploy/argocd/kind/values.yaml`
+    dùng `--require-key`; `check-platform.sh` kiểm backup khớp `tls.crt` của key đang chạy (không chỉ file tồn tại).
+  - R3 test truyền `KIND_CLUSTER` trên dòng lệnh make; `make kind-test` (`## Regression tests for kind scripts (needs the kind cluster)`).
+  - R4 thêm ghi chú vào evidence T8 (tasks.json) và Step `kind-down` của T8 (plan.md): hành vi `-` nuốt lỗi đã thay ở review S1 (9a5ad59).
+  - F5 `cd pkg && GOWORK=off go mod tidy` (hoặc trong workspace nếu tidy cần) → `go mod tidy -diff` rỗng.
+  - F6 `spa.Dockerfile` build stage: `rm -f apps/${APP}/dist/config.js` (file dev chỉ dùng cho `vite dev`); nginx trả 404 khi không mount.
+- [ ] **Step 3: Kiểm chứng** — `make kind-test`, `make images image-smoke`, `make kind-platform` (post hook) + `deploy/kind/check-platform.sh`,
+  `cd pkg && go mod tidy -diff`, `make test`, `make lint`; `make kind-load kind-apps kind-smoke` vẫn pass (SPA trên kind vẫn có config.js từ ConfigMap).
+- [ ] **Step 4: Commit** `feat(platform): T22 — review S1 follow-ups (kind-down, sealed key backup, kind-test, pkg tidy, SPA config.js)`
+
+**Lệnh kiểm chứng:** `make kind-test && make image-smoke && deploy/kind/check-platform.sh && (cd pkg && go mod tidy -diff)`
+
+---
+
 # Sprint S3 — GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)
 
 **Sprint goal:** commit lên `main` → `main.yml` build/scan/ký/push 6 image, bot ghi digest vào `deploy/releases/kind.yaml`; Argo CD trên kind (app-of-apps) tự sync bản mới, chạy PreSync migration; `rollback.yml` đưa digest về bản trước; nghiệm thu đủ tiêu chí 1–6 của spec. **Demo:** `make kind-down && make kind-up GH_OWNER=<owner>` → mọi Application `Synced/Healthy`; push một commit → digest mới chạy trên kind; `gh workflow run rollback.yml` → digest cũ.
@@ -6320,7 +6361,7 @@ git commit -m "ci(platform): rollback.yml reverts a kind digest bump through bg-
 
 **Interfaces:**
 - Consumes: catalog `addons[]` (T9–T14), chart `deploy/helm/<d>` (T7), `deploy/releases/kind.yaml` (T19), `sealed-key.sh` (T8), smoke/watch (T12–T17), rollback (T20).
-- Produces: Application `bg-kind-root` (ns `argocd`, path `deploy/argocd/kind`, Helm parameter `repoURL`, `ghOwner`), một Application cho mỗi addon (annotation `argocd.argoproj.io/sync-wave` = `wave`) và mỗi app (wave `0`, multi-source: `deploy/helm/<d>` + `values-kind.yaml` + `$values/deploy/releases/kind.yaml`, parameter `global.ghOwner`, `global.imagePullSecrets[0]=ghcr-pull`); Secret repo `argocd/repo-banking-go` (từ deploy key, tạo bởi bootstrap); `deploy/kind/wait-argocd.sh` (env `WAIT_TIMEOUT`, mặc định 1800 s); `make kind-up GH_OWNER=<owner>` = GitOps đầy đủ; không có `GH_OWNER` → chỉ cluster + Argo CD (đường offline `kind-platform`/`kind-apps` giữ nguyên cho máy chưa có GitHub).
+- Produces: Application `bg-kind-root` (ns `argocd`, path `deploy/argocd/kind`, Helm parameter `repoURL`, `ghOwner`), một Application cho mỗi addon (annotation `argocd.argoproj.io/sync-wave` = `wave`) và mỗi app (wave `0`; riêng `core-worker` wave `1` để chỉ rollout sau khi `core` Healthy — migration PreSync của core xong; core migrate fail thì core-worker giữ bản cũ (review S1 F3); multi-source: `deploy/helm/<d>` + `values-kind.yaml` + `$values/deploy/releases/kind.yaml`, parameter `global.ghOwner`, `global.imagePullSecrets[0]=ghcr-pull`); Secret repo `argocd/repo-banking-go` (từ deploy key, tạo bởi bootstrap); `deploy/kind/wait-argocd.sh` (env `WAIT_TIMEOUT`, mặc định 1800 s); `make kind-up GH_OWNER=<owner>` = GitOps đầy đủ; không có `GH_OWNER` → chỉ cluster + Argo CD (đường offline `kind-platform`/`kind-apps` giữ nguyên cho máy chưa có GitHub).
 
 - [ ] **Step 1: Viết test thất bại**
 
@@ -6346,6 +6387,11 @@ tests:
       - contains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
       - equal: {path: spec.sources[1], value: {repoURL: "git@github.com:acme/banking-go.git", targetRevision: main, ref: values}}
       - equal: {path: spec.syncPolicy.automated, value: {prune: true, selfHeal: true}}
+  - it: core-worker syncs after core (wave 1) so it never runs ahead of core's PreSync migration (review S1 F3)
+    template: templates/apps.yaml
+    documentSelector: {path: metadata.name, value: core-worker}
+    asserts:
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "1"}
   - it: renders the 10 deployables
     template: templates/apps.yaml
     asserts:
@@ -6473,7 +6519,8 @@ metadata:
   name: {{ . }}
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    # core-worker shares core's database: wave 1 waits for the core Application (PreSync migration + rollout) to be Healthy.
+    argocd.argoproj.io/sync-wave: {{ if eq . "core-worker" }}"1"{{ else }}"0"{{ end }}
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -6520,7 +6567,7 @@ spec:
 ```
 và thêm cuối file:
 ```yaml
-# Wave 0: one Application per deployable (AD-1); must match deploy/deployables.tsv.
+# Wave 0 (core-worker wave 1, after core): one Application per deployable (AD-1); must match deploy/deployables.tsv.
 apps: [core, core-worker, public-api, admin-api, mock-napas, mock-ekyc, mock-otp, mock-gateway, web-customer, web-admin]
 ```
 
@@ -6720,7 +6767,7 @@ Ghi kết quả từng dòng (lệnh + output rút gọn) làm evidence của T2
 | S2 | Observability as code trên kind: trace + RED + alert (promtool) + dashboard + Telegram + runbook + watch | T13, T14, T15, T16, T17 (5) |
 | S3 | GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước): CI image/chart/obs, main.yml ký + bump digest, rollback.yml, app-of-apps, nghiệm thu tiêu chí 1–6 | T18, T19, T20, T21 (4) |
 
-Tổng: 21 task (S1 12, S2 5, S3 4) — mỗi sprint ≤ 15, 3 sprint.
+Tổng: 22 task (S1 12, S2 6 — gồm T22 thêm sau review S1, S3 4) — mỗi sprint ≤ 15, 3 sprint.
 
 ## Thứ tự phụ thuộc
 

@@ -48,3 +48,10 @@ Bước 3 RED đã chạy ở vòng 1 (Makefile cũ → `delete cluster --name b
 Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · maintainability 4.
 **Verdict: Accept** — F1 (Major duy nhất) đã sửa và có test hồi quy RED/GREEN; còn lại Minor (F2, F5, F6, N1, R1–R4) và lớp b
 (F3 plan T21, F4 anti-affinity v2) chờ owner quyết.
+
+## Quyết định của owner — 2026-10-06
+- R1, R2, R3, R4, F5, F6 → task **T22** "Sửa lỗi nhỏ sau review S1" (sprint S2).
+- N1 → hoãn, làm khi có migration thật đầu tiên.
+- F2 → bỏ qua; ghi vào Gotchas trong `CLAUDE.md`.
+- F3 → đã sửa plan T21: `core-worker` sync-wave `1` (sau `core` Healthy) + helm-unittest tương ứng.
+- F4 → chưa có quyết định.
