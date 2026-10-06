@@ -67,7 +67,7 @@ Quy ước tên trên cluster:
 
 Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, chưa cần GitHub)"
 - [x] T1: Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)
-- [ ] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
+- [x] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [ ] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
 - [ ] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 - [ ] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
@@ -284,7 +284,7 @@ git commit -m "feat(platform): pin k8s/devops CLIs into ./bin via make tools-k8s
 - Consumes: `config.Load[T](service string, cfg T) (T, error)` (`pkg/config`), `buildinfo.Version`.
 - Produces: `func migrate.Up(ctx context.Context, dsn string, fsys fs.FS, log *slog.Logger) error`; `const migrate.LockTimeout = "5s"`; `var migrations.FS embed.FS` trong `banking-go/services/{core,public-api,admin-api}/migrations`; CLI `<svc> migrate up` đọc `BG_CORE_MIGRATOR_DSN` / `BG_PUBLIC_API_MIGRATOR_DSN` / `BG_ADMIN_API_MIGRATOR_DSN` (bắt buộc, không rỗng). Lib chart (T6) gọi `[<command[0]>, "migrate", "up"]` và đặt env `BG_<SVC>_MIGRATOR_DSN`.
 
-- [ ] **Step 1: Thêm dependency**
+- [x] **Step 1: Thêm dependency**
 
 Run:
 ```bash
@@ -293,7 +293,7 @@ cd pkg && go get github.com/pressly/goose/v3@v3.28.0 github.com/jackc/pgx/v5@v5.
 ```
 Expected: `pkg/go.mod` có 4 require mới.
 
-- [ ] **Step 2: Viết unit test thất bại** — `pkg/migrate/migrate_test.go`
+- [x] **Step 2: Viết unit test thất bại** — `pkg/migrate/migrate_test.go`
 
 ```go
 package migrate
@@ -333,7 +333,7 @@ func TestUpRejectsMalformedDSN(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Viết integration test** — `pkg/migrate/migrate_integration_test.go`
+- [x] **Step 3: Viết integration test** — `pkg/migrate/migrate_integration_test.go`
 
 ```go
 //go:build integration
@@ -387,12 +387,12 @@ func TestUpAppliesOnceAndIsSafeToRerun(t *testing.T) {
 }
 ```
 
-- [ ] **Step 4: Chạy để thấy fail**
+- [x] **Step 4: Chạy để thấy fail**
 
 Run: `make test-one PKG=./pkg/migrate`
 Expected: FAIL — `undefined: Up`.
 
-- [ ] **Step 5: Implement** — `pkg/migrate/migrate.go`
+- [x] **Step 5: Implement** — `pkg/migrate/migrate.go`
 
 ```go
 // Package migrate applies a service's embedded goose migrations with the migrator role (AD-26).
@@ -459,12 +459,12 @@ func Up(ctx context.Context, dsn string, fsys fs.FS, log *slog.Logger) error {
 }
 ```
 
-- [ ] **Step 6: Chạy unit + integration test pkg**
+- [x] **Step 6: Chạy unit + integration test pkg**
 
 Run: `make test-one PKG=./pkg/migrate && go test -tags integration -count=1 -run TestUpAppliesOnceAndIsSafeToRerun ./pkg/migrate`
 Expected: `ok banking-go/pkg/migrate` cả hai (integration cần Docker).
 
-- [ ] **Step 7: Package embed migration** (3 file, khác nhau ở comment)
+- [x] **Step 7: Package embed migration** (3 file, khác nhau ở comment)
 
 `services/core/migrations/embed.go`:
 ```go
@@ -508,7 +508,7 @@ import "embed"
 var FS embed.FS
 ```
 
-- [ ] **Step 8: Viết test CLI thất bại** — `services/core/cmd/core/migrate_test.go`
+- [x] **Step 8: Viết test CLI thất bại** — `services/core/cmd/core/migrate_test.go`
 
 ```go
 package main
@@ -602,12 +602,12 @@ func TestMigrateUpWithoutMigrationsIsNoop(t *testing.T) {
 }
 ```
 
-- [ ] **Step 9: Chạy để thấy fail**
+- [x] **Step 9: Chạy để thấy fail**
 
 Run: `make test-one PKG=./services/core/cmd/core RUN=TestMigrate`
 Expected: FAIL — `undefined: migrateMain`.
 
-- [ ] **Step 10: Implement CLI** — `services/core/cmd/core/migrate.go`
+- [x] **Step 10: Implement CLI** — `services/core/cmd/core/migrate.go`
 
 ```go
 package main
@@ -725,7 +725,7 @@ func migrateMain(args []string) error {
 }
 ```
 
-- [ ] **Step 11: Dispatch trong `main()`** — chèn ở đầu `func main()` của `services/core/cmd/core/main.go` (trước `signal.NotifyContext`):
+- [x] **Step 11: Dispatch trong `main()`** — chèn ở đầu `func main()` của `services/core/cmd/core/main.go` (trước `signal.NotifyContext`):
 
 ```go
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
@@ -744,12 +744,12 @@ Trong `services/public-api/cmd/public-api/main.go` và `services/admin-api/cmd/a
 ```
 (admin-api: `admin-api migrate up  apply embedded migrations with BG_ADMIN_API_MIGRATOR_DSN (PreSync Job)`).
 
-- [ ] **Step 12: Đồng bộ go.mod các service**
+- [x] **Step 12: Đồng bộ go.mod các service**
 
 Run: `for m in services/core services/public-api services/admin-api services/mocks; do (cd $m && go mod tidy); done`
 Expected: `goose`/`pgx` xuất hiện dạng `// indirect` trong go.mod các service dùng `pkg/migrate`.
 
-- [ ] **Step 13: `.env.example`** — thêm sau `BG_CORE_SHUTDOWN_TIMEOUT=30s`, `BG_PUBLIC_API_SHUTDOWN_TIMEOUT=30s`, `BG_ADMIN_API_SHUTDOWN_TIMEOUT=30s` tương ứng:
+- [x] **Step 13: `.env.example`** — thêm sau `BG_CORE_SHUTDOWN_TIMEOUT=30s`, `BG_PUBLIC_API_SHUTDOWN_TIMEOUT=30s`, `BG_ADMIN_API_SHUTDOWN_TIMEOUT=30s` tương ứng:
 
 ```dotenv
 # Migrator DSN, read only by `core migrate up` (PreSync Job, role core_migrator, AD-26). Compose value:
@@ -764,17 +764,17 @@ BG_PUBLIC_API_MIGRATOR_DSN=postgres://public_migrator:public_migrator@localhost:
 BG_ADMIN_API_MIGRATOR_DSN=postgres://admin_migrator:admin_migrator@localhost:5432/admin?sslmode=disable
 ```
 
-- [ ] **Step 14: Chạy test + lint**
+- [x] **Step 14: Chạy test + lint**
 
 Run: `make test-one PKG=./services/core/cmd/core RUN=TestMigrate && make test-one PKG=./services/public-api/cmd/public-api RUN=TestMigrate && make test-one PKG=./services/admin-api/cmd/admin-api RUN=TestMigrate && make test && make lint`
 Expected: tất cả PASS, lint exit 0.
 
-- [ ] **Step 15: Thử thật với compose**
+- [x] **Step 15: Thử thật với compose**
 
 Run: `make up && set -a && . ./.env.example && set +a && go run ./services/core/cmd/core migrate up`
 Expected: log JSON `"msg":"migrate: no migrations, nothing to do"`, exit 0.
 
-- [ ] **Step 16: Commit**
+- [x] **Step 16: Commit**
 
 ```bash
 git add pkg/migrate pkg/go.mod pkg/go.sum services/core services/public-api services/admin-api services/mocks/go.mod services/mocks/go.sum .env.example

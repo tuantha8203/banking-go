@@ -3,6 +3,7 @@
 //
 //	public-api          run the server
 //	public-api openapi  print the OpenAPI 3.1 YAML (make gen writes api/openapi/public-api.yaml)
+//	public-api migrate up  apply embedded migrations with BG_PUBLIC_API_MIGRATOR_DSN (PreSync Job)
 package main
 
 import (
@@ -39,6 +40,13 @@ func defaultConfig() Config {
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "openapi" {
 		if err := writeOpenAPI(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		if err := migrateMain(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}

@@ -1,11 +1,10 @@
 # Board — platform v1 — sprint S1
 
-Tiến độ: **1/12 done** · 0 doing · 0 blocked · 0 dropped
+Tiến độ: **2/12 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Doing
 
 ## Todo
-- [ ] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [ ] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
 - [ ] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 - [ ] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
@@ -21,6 +20,7 @@ Tiến độ: **1/12 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Done
 - [x] T1: Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)
+- [x] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 
 ## Dropped
 

@@ -32,8 +32,8 @@
       "sprint": "S1",
       "name": "Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api",
       "dependencies": [],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make test-one PKG=./pkg/migrate → 3 PASS; go test -tags integration -count=1 -run TestUpAppliesOnceAndIsSafeToRerun ./pkg/migrate → ok (Postgres 18.6 testcontainers, 85s); make test-one PKG=./services/{core/cmd/core,public-api/cmd/public-api,admin-api/cmd/admin-api} RUN=TestMigrate → 3×3 PASS; make test → exit 0; make lint → exit 0; make up && (set -a; . ./.env.example) && go run ./services/{core,public-api,admin-api}/cmd/<svc> migrate up → JSON \"migrate: no migrations, nothing to do\", exit 0 cả 3. services/mocks/go.mod không đổi sau go mod tidy (mocks không dùng pkg/migrate)."
     },
     {
       "id": "T3",
