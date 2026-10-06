@@ -72,8 +72,8 @@
       "dependencies": [
         "T5"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make helm-test → Charts: 1 passed, Test Suites: 6 passed, Tests: 25 passed (RED trước đó: 4 suites/7 tests fail); mutation check (PDB minAvailable 2, hook PreSync→Sync) → 2 suites fail rồi khôi phục; helm lint _libtest (route+migration+mtls+replicas=2) → 0 failed, render đủ PDB/HTTPRoute/Job/Certificate; make lint → exit 0. Template copy nguyên văn từ plan."
     },
     {
       "id": "T7",

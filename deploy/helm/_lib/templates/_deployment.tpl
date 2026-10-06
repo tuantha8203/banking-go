@@ -116,6 +116,11 @@ spec:
               subPath: {{ $file }}
               readOnly: true
             {{- end }}
+            {{- if .Values.mtls.enabled }}
+            - name: mtls
+              mountPath: /etc/bg/mtls
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
@@ -123,5 +128,10 @@ spec:
         - name: config
           configMap:
             name: {{ include "lib.name" . }}
+        {{- end }}
+        {{- if .Values.mtls.enabled }}
+        - name: mtls
+          secret:
+            secretName: {{ include "lib.name" . }}-mtls
         {{- end }}
 {{- end -}}

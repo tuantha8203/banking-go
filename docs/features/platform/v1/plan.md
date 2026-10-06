@@ -71,7 +71,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
 - [x] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 - [x] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
-- [ ] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
+- [x] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [ ] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
 - [ ] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
 - [ ] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
@@ -1817,7 +1817,7 @@ git commit -m "feat(platform): helm library chart with deployment, service, serv
 - Consumes: `lib.name`, `lib.labels`, `lib.selectorLabels`, `lib.envPrefix`, `lib.image` (T5); CLI `<cmd> migrate up` + env `BG_<SVC>_MIGRATOR_DSN` (T2).
 - Produces: values `route.{enabled,host,pathPrefix}`, `global.gateway.{name,namespace,sectionName}` (mặc định `traefik-gateway`/`traefik`/`websecure`), `migration.{enabled,dsnSecret}` (Secret có key `dsn`), `mtls.enabled` (+ `mtls.issuer`, mặc định ClusterIssuer `bg-internal-ca`); Job `<name>-migrate` (label `app.kubernetes.io/name: <name>-migrate`, không bị Service chọn); Certificate + Secret `<name>-mtls` mount tại `/etc/bg/mtls`; PDB `minAvailable: 1` khi `replicas > 1`.
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 `deploy/helm/_libtest/tests/migration_test.yaml`:
 ```yaml
@@ -1934,12 +1934,12 @@ tests:
         documentSelector: {path: kind, value: Deployment}
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `make helm-test`
 Expected: FAIL — các suite mới báo `document not found`/`hasDocuments` sai.
 
-- [ ] **Step 3: Implement template**
+- [x] **Step 3: Implement template**
 
 `deploy/helm/_lib/templates/_httproute.tpl`:
 ```yaml
@@ -2126,12 +2126,12 @@ và ngay sau khối `{{- if .Values.configFiles }} … {{- end }}` trong `volume
         {{- end }}
 ```
 
-- [ ] **Step 4: Chạy test pass**
+- [x] **Step 4: Chạy test pass**
 
 Run: `make helm-test`
 Expected: `Test Suites: 6 passed`, không test fail.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add deploy/helm/_lib deploy/helm/_libtest

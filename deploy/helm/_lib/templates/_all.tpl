@@ -4,7 +4,11 @@
     (include "lib.serviceaccount" .)
     (include "lib.service" .)
     (include "lib.configmap" .)
-    (include "lib.deployment" .) -}}
+    (include "lib.deployment" .)
+    (include "lib.pdb" .)
+    (include "lib.httproute" .)
+    (include "lib.migration" .)
+    (include "lib.certificate" .) -}}
 {{- range $docs }}
 {{- if trim . }}
 ---
