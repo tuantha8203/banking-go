@@ -69,7 +69,7 @@ Root app `bg-staging-root` → các Application con; thứ tự bằng `argocd.a
 | -30 | Gateway API CRDs | v1.6.x standard | Manifest upstream (cài trước controller) |
 | -25 | Argo CD (self-managed) | v3.5 | Chart `argo/argo-cd` |
 | -20 | cert-manager (+ ClusterIssuer Let's Encrypt, internal CA cho mTLS) | v1.21.x | Chart jetstack |
-| -20 | Sealed Secrets | v0.40 | Chart bitnami-labs **controller** (repo sealed-secrets, không phải Bitnami charts catalog) `[D-8]` |
+| -20 | Sealed Secrets | v0.40 | Chart **controller** của project sealed-secrets (repo `https://bitnami.github.io/sealed-secrets`, không phải Bitnami charts catalog) `[D-8]` |
 | -20 | Cilium, local-path-provisioner, metrics-server | pin trong values `[D-3]` `[D-4]` | Chart upstream |
 | -15 | Traefik (Gateway provider) | v3.7 | Chart traefik |
 | -15 | CloudNativePG operator + Barman Cloud plugin | 1.30 | Chart cloudnative-pg |
@@ -181,7 +181,7 @@ flowchart LR
 | SAST | CodeQL (Go, TS) + gosec qua golangci-lint |
 | Deps | govulncheck, osv-scanner (Go + pnpm lockfile) |
 | Image scan | Trivy (OS + lib) |
-| SBOM / ký | syft (SPDX JSON) + cosign v2 keyless; verify `cosign verify --certificate-identity-regexp '^https://github.com/<owner>/banking-go/.github/workflows/main.yml@refs/heads/main$' --certificate-oidc-issuer https://token.actions.githubusercontent.com` |
+| SBOM / ký | syft (SPDX JSON) + cosign v3 keyless; verify `cosign verify --certificate-identity-regexp '^https://github.com/<owner>/banking-go/.github/workflows/main.yml@refs/heads/main$' --certificate-oidc-issuer https://token.actions.githubusercontent.com` |
 | E2E / DAST | Playwright (`tests/e2e`) với mock failure mode; OWASP ZAP baseline trên `*.stg` |
 
 ### GitHub Actions workflows (`.github/workflows/`)
@@ -401,7 +401,7 @@ Phương án cuối: destroy + dựng lại (prod disposable). Staging infra: re
 | D-5 | Không cloud LB ở VPS: Traefik DaemonSet hostPort trên 3 worker, DNS A record trỏ 3 worker |
 | D-6 | Mã hóa đĩa staging: của nhà cung cấp nếu có, không thì LUKS qua Ansible |
 | D-7 | Snapshot etcd hằng ngày lên SeaweedFS |
-| D-8 | Sealed Secrets cài bằng chart của project sealed-secrets (repo bitnami-labs, không phải Bitnami charts catalog); image controller của project nằm dưới namespace `bitnami` trên registry — owner đã xác nhận là ngoại lệ của AD-14 (2026-10-06) |
+| D-8 | Sealed Secrets cài bằng chart của project sealed-secrets (chart repo `https://bitnami.github.io/sealed-secrets`, mã nguồn bitnami-labs; không phải Bitnami charts catalog); image controller của project nằm dưới namespace `bitnami` trên registry — owner đã xác nhận là ngoại lệ của AD-14 (2026-10-06) |
 | D-9 | Topology RabbitMQ (exchange, retry, DLQ, user) khai báo bằng Messaging Topology Operator ở cả hai env; prod trỏ tới Amazon MQ qua `connectionSecret` (cluster ngoài) |
 | D-10 | Capacity budget staging theo bảng, xem lại sau load test R3 |
 | D-11 | Region prod `ap-southeast-1` |
