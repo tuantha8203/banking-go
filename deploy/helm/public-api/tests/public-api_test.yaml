@@ -1,0 +1,36 @@
+suite: public-api chart (env kind)
+templates:
+  - templates/all.yaml
+values:
+  - ../values-kind.yaml
+release:
+  name: public-api
+  namespace: banking
+tests:
+  - it: takes the digest from deploy/releases/kind.yaml
+    set:
+      public-api: {image: ghcr.io/acme/banking-go/public-api, digest: "sha256:4444444444444444444444444444444444444444444444444444444444444444"}
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/acme/banking-go/public-api@sha256:4444444444444444444444444444444444444444444444444444444444444444
+      - equal: {path: spec.replicas, value: 1}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BG_PUBLIC_API_ENVIRONMENT, value: kind}
+      - equal: {path: "spec.template.spec.containers[0].envFrom[0].secretRef.name", value: public-api-env}
+  - it: routes api.kind.localhost to the HTTP port
+    set:
+      image.tag: local
+    documentSelector: {path: kind, value: HTTPRoute}
+    asserts:
+      - equal: {path: spec.hostnames, value: [api.kind.localhost]}
+      - equal: {path: spec.rules[0].backendRefs[0].port, value: 8081}
+  - it: migrates with public-api migrate up and the migrator DSN secret
+    set:
+      image.tag: local
+    documentSelector: {path: kind, value: Job}
+    asserts:
+      - equal: {path: spec.template.spec.containers[0].command, value: [/usr/local/bin/public-api, migrate, up]}
+      - equal: {path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name, value: public-api-migrator-dsn}
