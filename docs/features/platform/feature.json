@@ -1,0 +1,9 @@
+{
+  "feature": "platform",
+  "title": "Nền tảng vận hành",
+  "current": null,
+  "working": "v1",
+  "versions": {
+    "v1": { "status": "draft", "summary": "Đóng gói + pipeline, Helm + GitOps, observability as code; kiểm chứng trên cluster local" }
+  }
+}
