@@ -20,3 +20,7 @@ playwright-report/
 test-results/
 bin/
 *.out
+
+# Helm dependency build output (lib chart is a file:// dependency)
+deploy/helm/*/charts/
+deploy/helm/*/Chart.lock

@@ -1,0 +1,26 @@
+# Fixture shaped like a Go service chart; tests override keys with `set`.
+global:
+  ghOwner: acme
+  imagePullSecrets: []
+  otelEndpoint: ""
+  gateway: {name: traefik-gateway, namespace: traefik, sectionName: websecure}
+image:
+  repository: "ghcr.io/{{ .Values.global.ghOwner }}/banking-go/libtest"
+  digest: ""
+  tag: local
+  pullPolicy: IfNotPresent
+command: ["/usr/local/bin/libtest"]
+ports: {app: 8081, admin: 9181}
+replicas: 1
+resources:
+  requests: {cpu: 10m, memory: 32Mi}
+  limits: {memory: 128Mi}
+env:
+  BG_LIBTEST_ENVIRONMENT: test
+envFromSecrets: []
+configFiles: {}
+secretsRevision: "0"
+route: {enabled: false, host: "", pathPrefix: /}
+migration: {enabled: false, dsnSecret: ""}
+mtls: {enabled: false}
+shutdownTimeoutSeconds: 30

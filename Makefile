@@ -168,6 +168,14 @@ image-smoke: ## Run every local image and probe it (make images first)
 	VERSION=$(VERSION) scripts/image-smoke.sh $(IMAGE_PREFIX) $(IMAGE_TAG)
 
 # ---------------------------------------------------------------------------------------------
+# Helm (platform v1): deploy/helm/_lib is the only place with Kubernetes templates.
+.PHONY: helm-test
+helm-test: tools-k8s ## helm-unittest: lib fixture chart + every chart with tests/
+	@for c in deploy/helm/_libtest $(filter-out deploy/helm/_%,$(wildcard deploy/helm/*)); do \
+		if [ -d $$c/tests ]; then echo "== $$c"; { $(HELM) dependency build $$c >/dev/null && $(HELM) unittest $$c; } || exit 1; fi; \
+	done
+
+# ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy
 	$(COMPOSE) up -d --wait

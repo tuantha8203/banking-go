@@ -1,0 +1,110 @@
+suite: lib deployment
+templates:
+  - templates/all.yaml
+tests:
+  - it: takes image and digest from the releases file entry keyed by deployable name
+    set:
+      libtest:
+        image: ghcr.io/acme/banking-go/core
+        digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/acme/banking-go/core@sha256:1111111111111111111111111111111111111111111111111111111111111111
+  - it: falls back to image.digest on the templated repository
+    set:
+      image.digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/acme/banking-go/libtest@sha256:2222222222222222222222222222222222222222222222222222222222222222
+  - it: uses repository:tag for images loaded into kind
+    set:
+      image.repository: banking-go/libtest
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: spec.template.spec.containers[0].image, value: "banking-go/libtest:local"}
+  - it: fails without a digest or a tag
+    set:
+      image.tag: ""
+    asserts:
+      - failedTemplate: {errorPattern: "no digest"}
+  - it: fails when global.ghOwner is empty
+    set:
+      global.ghOwner: ""
+    asserts:
+      - failedTemplate: {errorPattern: "global.ghOwner is empty"}
+  - it: rolls out with zero unavailable and drains within the grace period (AD-26)
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: spec.strategy.rollingUpdate.maxUnavailable, value: 0}
+      - equal: {path: spec.strategy.rollingUpdate.maxSurge, value: 1}
+      - equal: {path: spec.minReadySeconds, value: 10}
+      - equal: {path: spec.progressDeadlineSeconds, value: 300}
+      - equal: {path: spec.template.spec.terminationGracePeriodSeconds, value: 45}
+      - equal: {path: spec.template.spec.containers[0].lifecycle.preStop.sleep.seconds, value: 5}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BG_LIBTEST_SHUTDOWN_TIMEOUT, value: "30s"}
+  - it: probes /livez and /readyz on the admin port
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: spec.template.spec.containers[0].livenessProbe.httpGet.path, value: /livez}
+      - equal: {path: spec.template.spec.containers[0].livenessProbe.httpGet.port, value: admin}
+      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.path, value: /readyz}
+  - it: probes /healthz on the app port when there is no admin port (SPA)
+    set:
+      ports.admin: null
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.path, value: /healthz}
+      - equal: {path: spec.template.spec.containers[0].readinessProbe.httpGet.port, value: app}
+  - it: runs non-root with a read-only root filesystem and a writable /tmp
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: spec.template.spec.securityContext.runAsNonRoot, value: true}
+      - equal: {path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem, value: true}
+      - equal: {path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation, value: false}
+      - equal: {path: spec.template.spec.containers[0].securityContext.capabilities.drop, value: [ALL]}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: tmp, mountPath: /tmp}
+  - it: injects env, envFromSecrets, the OTLP endpoint and pull secrets
+    set:
+      envFromSecrets: [libtest-env]
+      global.otelEndpoint: http://otel-collector.observability.svc:4317
+      global.imagePullSecrets: [ghcr-pull]
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BG_LIBTEST_ENVIRONMENT, value: test}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.observability.svc:4317"}
+      - equal: {path: "spec.template.spec.containers[0].envFrom[0].secretRef.name", value: libtest-env}
+      - equal: {path: "spec.template.spec.imagePullSecrets[0].name", value: ghcr-pull}
+  - it: uses the command and both container ports
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: spec.template.spec.containers[0].command, value: [/usr/local/bin/libtest]}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: app, containerPort: 8081}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: admin, containerPort: 9181}
+  - it: mounts configFiles from the ConfigMap and restarts pods on change
+    set:
+      configFiles:
+        config.js:
+          mountPath: /usr/share/nginx/html/config.js
+          content: "window.__BG_CONFIG__ = {}"
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: config, mountPath: /usr/share/nginx/html/config.js, subPath: config.js, readOnly: true}
+      - exists: {path: "spec.template.metadata.annotations[\"checksum/config\"]"}
