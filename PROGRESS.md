@@ -28,6 +28,7 @@
 - Không có.
 
 ## Ghi chú cho phiên sau
+- Backlog platform v2 (review S1, F4): anti-affinity/`topologySpreadConstraints` mềm (hostname + zone) trong `deploy/helm/_lib` Deployment theo deployment.md:239, kèm helm-unittest — làm cùng values staging/prod.
 - Hoãn (review platform S1, N1): test `lock_timeout=5s` + advisory lock của `pkg/migrate` — làm khi có migration thật đầu tiên.
 - BMAD tắt trong settings dự án; bật lại qua /plugin khi chạy /foundation (config ở _bmad/, output docs/foundation/_bmad/).
 - Plugin Superpowers user-level bị tắt trong dự án; bản copy lẻ ở .claude/vendor/superpowers/.

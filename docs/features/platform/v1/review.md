@@ -54,4 +54,4 @@ Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · main
 - N1 → hoãn, làm khi có migration thật đầu tiên.
 - F2 → bỏ qua; ghi vào Gotchas trong `CLAUDE.md`.
 - F3 → đã sửa plan T21: `core-worker` sync-wave `1` (sau `core` Healthy) + helm-unittest tương ứng.
-- F4 → chưa có quyết định.
+- F4 → backlog v2 (owner duyệt 2026-10-06): `topologySpreadConstraints` mềm (hostname + zone, `ScheduleAnyway`) trong library chart + helm-unittest, làm cùng values staging/prod.
