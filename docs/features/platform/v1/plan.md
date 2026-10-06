@@ -85,7 +85,7 @@ Sprint S2 — "Observability as code trên kind"
 - [x] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
 - [x] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
 - [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
-- [ ] T17: Runbook + `make kind-watch`
+- [x] T17: Runbook + `make kind-watch`
 
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
 - [ ] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
@@ -5465,7 +5465,7 @@ git commit -m "feat(platform): alertmanager telegram routing for critical alerts
 - Consumes: nhãn `runbook_url` của rule (T14), `prom_value` (T13), `sli:error_ratio:rate5m` (T14).
 - Produces: 7 runbook theo khung observability.md (5 runbook spec yêu cầu cho Watchdog, SLO burn, p95, TelemetryPipeline, cert expiry + 2 cho `PodCrashLooping`/`ArgoCDAppDegraded` để không có `runbook_url` treo); `scripts/kind-watch.sh` (env `WATCH_MINUTES`, mặc định 10; exit 1 kèm lệnh rollback đề xuất); target `make runbooks-test`, `make kind-watch`.
 
-- [ ] **Step 1: Viết test thất bại** — `scripts/test-runbooks.sh`
+- [x] **Step 1: Viết test thất bại** — `scripts/test-runbooks.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -5497,7 +5497,7 @@ runbooks-test: tools-k8s ## Every runbook_url label points to a runbook with the
 Run: `chmod +x scripts/test-runbooks.sh && make runbooks-test`
 Expected: `FAIL: missing runbook observability/runbooks/argocd-app-degraded.md`.
 
-- [ ] **Step 2: Viết 7 runbook**
+- [x] **Step 2: Viết 7 runbook**
 
 `observability/runbooks/watchdog.md`:
 ````markdown
@@ -5700,7 +5700,7 @@ Mọi Application `Synced/Healthy` (`deploy/kind/wait-argocd.sh`), `make kind-sm
 Run: `make runbooks-test`
 Expected: 7 dòng `ok   observability/runbooks/…`.
 
-- [ ] **Step 3: Viết `scripts/kind-watch.sh`** (post-deploy watch biến thể kind: 10 phút, chỉ báo, owner quyết)
+- [x] **Step 3: Viết `scripts/kind-watch.sh`** (post-deploy watch biến thể kind: 10 phút, chỉ báo, owner quyết)
 
 ```bash
 #!/usr/bin/env bash
@@ -5745,7 +5745,7 @@ kind-watch: tools-k8s ## Post-deploy watch on kind (WATCH_MINUTES, default 10); 
 	scripts/kind-watch.sh
 ```
 
-- [ ] **Step 4: Chạy watch (đạt + vượt ngưỡng)**
+- [x] **Step 4: Chạy watch (đạt + vượt ngưỡng)**
 
 Run: `chmod +x scripts/kind-watch.sh && WATCH_MINUTES=2 make kind-watch`
 Expected: 2–3 dòng trạng thái, `watch ok: 2 phút không vượt ngưỡng`.
@@ -5753,7 +5753,7 @@ Expected: 2–3 dòng trạng thái, `watch ok: 2 phút không vượt ngưỡng
 Run (tiêm lỗi có chủ đích trên kind, trước GitOps): `bin/kubectl -n banking set env deploy/mock-otp BG_MOCK_OTP_ADMIN_ADDR=:bad; WATCH_MINUTES=3 WATCH_STEP_SECONDS=30 make kind-watch; bin/kubectl -n banking set env deploy/mock-otp BG_MOCK_OTP_ADMIN_ADDR-`
 Expected: `WATCH FAILED: pod restarts in namespace banking` + dòng `Đề xuất (owner quyết): gh workflow run rollback.yml …` (exit 1); lệnh cuối gỡ biến lỗi, pod cũ vẫn phục vụ suốt quá trình (`maxUnavailable: 0`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add observability/runbooks scripts/test-runbooks.sh scripts/kind-watch.sh Makefile

@@ -196,8 +196,8 @@
       "dependencies": [
         "T14"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (f28a7d1): make runbooks-test → \"FAIL: missing runbook observability/runbooks/argocd-app-degraded.md\". GREEN: make runbooks-test → 7 dòng ok (argocd-app-degraded, certificate-expiry, error-budget-burn, latency-p95-breach, pod-crashloop, telemetry-pipeline, watchdog); WATCH_MINUTES=2 make kind-watch → 3 dòng critical=0 error_ratio_5m=0 new_restarts=0, \"watch ok: 2 phút không vượt ngưỡng\", exit 0; tiêm lỗi `kubectl -n banking set env deploy/mock-otp BG_MOCK_OTP_ADMIN_ADDR=:bad` + WATCH_MINUTES=3 WATCH_STEP_SECONDS=30 make kind-watch → new_restarts=1, \"WATCH FAILED: pod restarts in namespace banking\", \"Đề xuất (owner quyết): gh workflow run rollback.yml -f env=kind -f revert_sha=<bump_sha>\", exit 2; gỡ biến → rollout ok, pod cũ 5cc68d5d56 Running suốt quá trình; make lint/test exit 0."
     },
     {
       "id": "T18",

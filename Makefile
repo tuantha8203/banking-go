@@ -222,6 +222,10 @@ kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.ya
 	IMAGE_PREFIX=$(IMAGE_PREFIX) IMAGE_TAG=$(IMAGE_TAG) scripts/kind-apps.sh
 	deploy/kind/check-apps.sh
 
+.PHONY: kind-watch
+kind-watch: tools-k8s ## Post-deploy watch on kind (WATCH_MINUTES, default 10); prints a rollback proposal on breach
+	scripts/kind-watch.sh
+
 .PHONY: collector-validate
 collector-validate: tools-k8s ## Validate deploy/collector/kind.yaml with the pinned otelcol-contrib image (needs Docker)
 	scripts/collector-validate.sh
