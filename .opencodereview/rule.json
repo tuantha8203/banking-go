@@ -1,0 +1,30 @@
+{
+  "exclude": ["**/node_modules/**", "pkg/gen/**", "**/*.pb.go", "services/*/api/openapi/**", "**/dist/**", "pnpm-lock.yaml", "**/go.sum", "docs/foundation/_bmad/**"],
+  "rules": [
+    {
+      "path": "services/core/internal/**/*.go",
+      "rule": "Tiền chỉ là int64/BIGINT VND, không float. Mọi biến động tiền qua hàm của module ledger trong Unit of Work của use case gốc (không Begin/Commit trong port). Chỉ payment.Transition đổi trạng thái giao dịch (khóa transaction rồi account theo id tăng dần, compare-and-set). Không gọi đối tác/HTTP trong transaction DB; timeout là unknown. Module chỉ import internal/<module khác>/app, không import domain/adapters của module khác, không truy vấn schema của module khác. Mọi lệnh tạo hiệu ứng ghi idempotency, outbox, audit trên cùng transaction.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "services/{public-api,admin-api}/**/*.go",
+      "rule": "Edge không chứa logic tiền, không truy cập DB của core; gọi core qua gRPC kèm internal token và idempotency-key. Lỗi REST theo RFC 9457 với mã snake_case trong api-contracts/README.md. Endpoint tạo hiệu ứng bắt buộc header Idempotency-Key.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "**/*.go",
+      "rule": "Error wrap bằng fmt.Errorf(\"...: %w\", err); goroutine có cách dừng qua context; không log PII đầy đủ (SĐT/CCCD chỉ 4 số cuối), token, secret, OTP, ảnh. Config chỉ từ env BG_<SERVICE>_<KEY>. Telemetry chỉ qua OTel SDK/OTLP. Integration test dùng Postgres/RabbitMQ thật (testcontainers), không mock DB cho logic tiền; không sửa/xóa test để cho qua.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "apps/**/*.{ts,tsx}",
+      "rule": "Dùng Ant Design 6 qua theme trong packages/theme; mọi chuỗi qua i18n (vi + en), không hard-code. Số tiền định dạng theo locale, tabular-nums, có dấu +/− cho giao dịch đã hạch toán. Không gộp trạng thái unknown vào pending. Mỗi màn tối đa một nút primary. Không tính tiền/phí ở client.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "services/*/migrations/**",
+      "rule": "Migration phải tương thích ngược với bản đang chạy (expand → deploy → contract); không sửa migration đã merge; journals/entries/audit_records chỉ INSERT/SELECT cho role app.",
+      "merge_system_rule": true
+    }
+  ]
+}

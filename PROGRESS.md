@@ -1,32 +1,32 @@
 # PROGRESS
 
 ## Current State
-- Cập nhật: 2026-10-05 · Commit: (chưa có) · Test: chưa có code
-- Giai đoạn: /vibe-setup Phase 1A — Step 0 Foundation: 8/8 phần xong — foundation v1 (đã rà chéo, 40 chỗ lệch đã sửa)
+- Cập nhật: 2026-10-06 · Commit: 9e8646d (scaffold) + setup AI workflow (commit kế) · Test: pass (`make test` → exit 0; `make lint` → exit 0)
+- Feature đang làm: chưa có · Sprint: - · Task đang làm: - (chi tiết: scripts/sprint.sh status)
 
 ## Đã xong
-- Tạo thư mục banking-go, git init, branch chore/ai-setup
-- Chọn công cụ Foundation: BMAD (bmad-method@bmad), đã bmad setup, output → docs/foundation/_bmad/
-- Step 0.1 Product: docs/foundation/product.md, glossary.md (brief gốc ở _bmad/planning-artifacts/briefs/)
-- Step 0.2 Business flows: docs/foundation/business-flows.md (PRD gốc ở _bmad/planning-artifacts/prds/, 24 FR R1)
-- Step 0.3 UX: docs/foundation/design-system.md (DESIGN/EXPERIENCE + mockups ở _bmad/planning-artifacts/ux-designs/)
-- Step 0.4 System design: ARCHITECTURE-SPINE.md (AD-1..26, reviewer gate 3 lens đã áp dụng) ở _bmad/planning-artifacts/architecture/; architecture.md + docs/adr/0001-0010
-- Step 0.5 Data & API: data-model.md, api-contracts/ (README+mã lỗi, public-api, admin-api, grpc, events)
-- Step 0.6: nfr.md, constitution.md
-- Step 0.7/0.8: deployment.md, observability.md
-- Rà chéo foundation: 40 chỗ lệch đã sửa; CHANGELOG foundation v1
+- Foundation v1 (docs/foundation/, spine AD-1..AD-26, ADR 0001–0010) — commit 15e846d
+- Scaffold monorepo (Go workspace, 2 SPA, compose local, Makefile, CI) — commit 9e8646d
+- Setup AI workflow: CLAUDE.md, .claude/settings.json (permissions, hooks, plugins), 11 lệnh vỏ, reviewer agent,
+  Superpowers (writing-plans, TDD, verification) + 18 mục ECC (vendor-lock.json), .opencodereview/rule.json,
+  init.sh, scripts/sprint.sh
 
 ## Đang dở
-- /vibe-setup Phase 1A: lượt hỏi 1–2 (stack đã suy ra từ foundation) → scaffold
-
-## Tiếp theo (cụ thể, làm được ngay)
-1. Xác nhận stack/tooling (Phase 1A lượt hỏi + Phase 2) → scaffold monorepo → make test/lint pass → commit chore: scaffold project
-
-## Blocker / Rủi ro
-- bmad-toolbox chưa cài (thiếu bmad-review/bmad-help) — không chặn
-
-## Baseline đã biết (test fail từ trước, không phải lỗi mới)
 - 
 
+## Tiếp theo (cụ thể, làm được ngay)
+1. Mở phiên Claude Code mới trong banking-go/ (nạp hooks/skills, đồng ý cài plugin), kiểm `/plugin`, `/hooks`, gõ `/`.
+2. Feature đầu tiên: `/brainstorm nền tảng vận hành R1` — Helm chart, Argo CD, staging kubeadm, Terraform prod, workflow main/release-prod/rollback theo deployment.md.
+3. Sau đó các feature nghiệp vụ R1 theo business-flows (BF-1 đăng ký + eKYC trước).
+
+## Blocker / Rủi ro
+- Chưa có remote GitHub; CI chưa chạy thật trên GitHub Actions.
+- Staging VPS và tài khoản AWS chưa có (cần cho feature nền tảng vận hành).
+
+## Baseline đã biết (test fail từ trước, không phải lỗi mới)
+- Không có.
+
 ## Ghi chú cho phiên sau
-- Foundation viết tại banking-go/docs/foundation/
+- BMAD tắt trong settings dự án; bật lại qua /plugin khi chạy /foundation (config ở _bmad/, output docs/foundation/_bmad/).
+- Plugin Superpowers user-level bị tắt trong dự án; bản copy lẻ ở .claude/vendor/superpowers/.
+- Open Code Review chạy chế độ delegate (`/open-code-review:delegate-review`), không cần API key.

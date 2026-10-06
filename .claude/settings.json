@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make install)", "Bash(make build)", "Bash(make test)", "Bash(make test-one *)", "Bash(make test-integration)",
+      "Bash(make lint)", "Bash(make vet)", "Bash(make fmt)", "Bash(make gen)", "Bash(make gen-check)", "Bash(make e2e)",
+      "Bash(make up)", "Bash(make up-obs)", "Bash(make down)", "Bash(make run)",
+      "Bash(./init.sh)", "Bash(scripts/sprint.sh *)",
+      "Bash(go test *)", "Bash(go vet *)", "Bash(go build *)", "Bash(golangci-lint run *)",
+      "Bash(npx -y pnpm@12.9.1 *)",
+      "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git show *)", "Bash(git branch *)",
+      "Bash(git add *)", "Bash(git commit *)", "Bash(git checkout -b *)", "Bash(git switch *)",
+      "Bash(docker compose -f deploy/compose/compose.yaml *)",
+      "Bash(ocr review *)", "Bash(ocr rules *)"
+    ],
+    "ask": ["Bash(git push *)"],
+    "deny": [
+      "Bash(git push --force *)", "Read(./.env)", "Read(./.env.local)", "Read(./secrets/**)",
+      "Bash(terraform apply*)", "Bash(terraform destroy*)",
+      "Bash(kubectl *prod*)", "Bash(helm *prod*)", "Bash(argocd *prod*)",
+      "Bash(ssh *prod*)", "Bash(scp *prod*)", "Bash(ansible-playbook *prod*)",
+      "Bash(gh workflow run release-prod*)", "Bash(gh workflow run infra-prod*)", "Bash(gh workflow run rollback*)",
+      "Bash(gh workflow run db-pitr*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-file.sh" }] }
+    ],
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/sprint.sh status" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/sprint-gate.sh" }] }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/sprint.sh status --short"
+  },
+  "extraKnownMarketplaces": {
+    "bmad": { "source": { "source": "github", "repo": "bmad-code-org/bmad-plugins" } },
+    "open-code-review": { "source": { "source": "github", "repo": "alibaba/open-code-review" } }
+  },
+  "enabledPlugins": {
+    "bmad-method@bmad": false,
+    "superpowers@superpowers-marketplace": false,
+    "open-code-review@open-code-review": true,
+    "claude-md-management@claude-plugins-official": true,
+    "claude-code-setup@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  }
+}

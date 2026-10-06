@@ -1,0 +1,240 @@
+{
+  "sources": [
+    {
+      "name": "ecc",
+      "repo": "https://github.com/affaan-m/ECC",
+      "ref": "v2.2.3",
+      "commit": "c05b2d6614f62f6db0047669aa4eefb223d478f9",
+      "license": "MIT"
+    },
+    {
+      "name": "superpowers",
+      "repo": "https://github.com/obra/superpowers",
+      "ref": "6.3.0",
+      "commit": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+      "license": "MIT"
+    }
+  ],
+  "items": [
+    {
+      "source": "superpowers",
+      "type": "skill",
+      "name": "writing-plans",
+      "path": ".claude/vendor/superpowers/writing-plans",
+      "reason": "plan step (CLAUDE.md Tool conventions: Plan = Superpowers writing-plans)",
+      "step": "plan",
+      "modified": true,
+      "note": "plan save location set to docs/features/<feature>/<vN>/plan.md (never docs/superpowers/)"
+    },
+    {
+      "source": "superpowers",
+      "type": "skill",
+      "name": "test-driven-development",
+      "path": ".claude/vendor/superpowers/test-driven-development",
+      "reason": "test step (constitution II.1 TDD; CLAUDE.md Test = Superpowers TDD)",
+      "step": "test",
+      "modified": true,
+      "note": "writing-good-tests.md: bỏ tham chiếu superpowers:writing-skills (skill không copy)"
+    },
+    {
+      "source": "superpowers",
+      "type": "skill",
+      "name": "verification-before-completion",
+      "path": ".claude/vendor/superpowers/verification-before-completion",
+      "reason": "verify step (constitution II.5 evidence before done)",
+      "step": "verify",
+      "modified": false,
+      "note": "verbatim"
+    },
+    {
+      "source": "ecc",
+      "type": "license",
+      "name": "LICENSE",
+      "path": ".claude/vendor/ecc/LICENSE",
+      "reason": "MIT attribution for copied ECC files",
+      "step": "-",
+      "modified": false,
+      "note": "verbatim"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "golang-patterns",
+      "path": ".claude/skills/golang-patterns",
+      "reason": "go.work, services/*/go.mod, pkg/go.mod, .golangci.yml",
+      "step": "implement",
+      "modified": true,
+      "note": "pgx.ErrNoRows, slog instead of log.*, removed Go<1.22 loop-var copy, layout -> architecture.md domain/app/adapters + depguard, pgxpool, Makefile targets instead of root ./..., removed golangci v1 config"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "golang-testing",
+      "path": ".claude/skills/golang-testing",
+      "reason": "pkg/*/*_test.go, services/*/cmd/*/main_test.go, Makefile test-one/test-integration",
+      "step": "implement",
+      "modified": true,
+      "note": "TDD section -> vendored Superpowers TDD; sqlite helper -> testcontainers Postgres 18 (integration tag); fakes only for non-money ports; b.Loop; removed mockgen and CI yaml; make test/test-one commands"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "postgres-patterns",
+      "path": ".claude/skills/postgres-patterns",
+      "reason": "compose postgres:18.6, tools/go.mod sqlc/goose/pgx, docs/foundation/data-model.md",
+      "step": "implement",
+      "modified": true,
+      "note": "money bigint VND, IDs UUIDv7, removed Supabase RLS and ALTER SYSTEM, added AD-5 lock order and cursor contract, named sqlc params, related links redirected"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "database-migrations",
+      "path": ".claude/skills/database-migrations",
+      "reason": "tools/go.mod goose, data-model.md <svc>_migrator, constitution IV.4",
+      "step": "implement",
+      "modified": true,
+      "note": "removed Prisma/Drizzle/Kysely/Django/golang-migrate, added goose workflow + NO TRANSACTION, down only locally, D-28 gate, append-only ledger rule"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "react-patterns",
+      "path": ".claude/skills/react-patterns",
+      "reason": "apps/web-*/package.json (react 19.3, antd 6.6, vite 8)",
+      "step": "implement",
+      "modified": true,
+      "note": "removed RSC/Server Actions/Next/SWR, AntD Form + TanStack Query mutation with Idempotency-Key, no optimistic UI for money, links redirected"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "react-testing",
+      "path": ".claude/skills/react-testing",
+      "reason": "apps/web-*/src/App.test.tsx, vite.config.ts test block, @testing-library/react",
+      "step": "implement",
+      "modified": true,
+      "note": "Vitest only (Jest/Cypress removed), not-installed deps flagged, AntD/i18n providers, /v1 MSW paths, TDD -> Superpowers, make test-one commands"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "e2e-testing",
+      "path": ".claude/skills/e2e-testing",
+      "reason": "apps/web-*/playwright.config.ts, apps/web-*/e2e/smoke.spec.ts, Makefile e2e",
+      "step": "verify",
+      "modified": true,
+      "note": "apps/<app>/e2e layout, role-first locators, no networkidle, repo config instead of template, quarantine rules (II.4), removed npm CI/Web3, banking transfer example"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "ecc-security-checklist",
+      "path": ".claude/skills/ecc-security-checklist",
+      "reason": "constitution III, api-contracts, ci.yml gitleaks, .golangci.yml gosec",
+      "step": "implement",
+      "modified": true,
+      "note": "renamed from security-review (built-in /security-review collision); rewritten for Go/Huma/pgx/AntD: pkg/config secrets, not_found on ownership miss, deferred token storage/CSRF, edge rate limit, slog; removed Supabase/Next/Solana/npm"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "docker-patterns",
+      "path": ".claude/skills/docker-patterns",
+      "reason": "deploy/compose/compose.yaml, Makefile up/down (Dockerfiles planned in deployment.md)",
+      "step": "implement",
+      "modified": true,
+      "note": "removed ECC plugin-setup harness and Node/redis samples, PG18 data dir, Go distroless multi-stage Dockerfile, compose commands via deploy/compose, secrets via Sealed Secrets/ESO"
+    },
+    {
+      "source": "ecc",
+      "type": "skill",
+      "name": "verification-loop",
+      "path": ".claude/vendor/ecc/verification-loop",
+      "reason": "Makefile, .github/workflows/ci.yml; run by /verify-done",
+      "step": "verify",
+      "modified": true,
+      "note": "make build/vet/lint/test/test-integration/e2e/gen-check, gitleaks as CI, float-money grep, diff vs main, removed python/npm/hooks"
+    },
+    {
+      "source": "ecc",
+      "type": "agent",
+      "name": "go-build-resolver",
+      "path": ".claude/agents/go-build-resolver.md",
+      "reason": "go.work workspace, Makefile build-go/vet/lint-go",
+      "step": "implement",
+      "modified": true,
+      "note": "make targets instead of root ./..., go mod tidy per module (tools GOWORK=off), ask before deps/modcache, depguard and generated-code stop rules"
+    },
+    {
+      "source": "ecc",
+      "type": "agent",
+      "name": "react-build-resolver",
+      "path": ".claude/agents/react-build-resolver.md",
+      "reason": "apps/web-*/vite.config.ts, tsconfig.base.json, pnpm-workspace.yaml",
+      "step": "implement",
+      "modified": true,
+      "note": "scoped to Vite SPAs + packages, pnpm via npx -y pnpm@12.9.1, removed Next/CRA/webpack/Parcel/Bun/Tailwind/hydration, lockfile never hand-edited"
+    },
+    {
+      "source": "ecc",
+      "type": "agent",
+      "name": "e2e-runner",
+      "path": ".claude/agents/e2e-runner.md",
+      "reason": "apps/web-*/e2e, playwright.config.ts, Makefile e2e",
+      "step": "verify",
+      "modified": true,
+      "note": "removed Agent Browser (global npm install), pnpm/make e2e commands, role-first locators, quarantine needs approval (II.4), banking flow priorities, never prod"
+    },
+    {
+      "source": "ecc",
+      "type": "command",
+      "name": "build-fix",
+      "path": ".claude/commands/build-fix.md",
+      "reason": "Makefile build/vet/lint/gen-check",
+      "step": "implement",
+      "modified": true,
+      "note": "Makefile targets per area, delegates to go-build-resolver/react-build-resolver, ask before deps, depguard/contract stop condition"
+    },
+    {
+      "source": "ecc",
+      "type": "rule",
+      "name": "common",
+      "path": ".claude/rules/ecc/common",
+      "reason": "whole repo (coding-style, patterns, security, testing, git-workflow only)",
+      "step": "implement",
+      "modified": true,
+      "note": "skipped agents/code-review/development-workflow/hooks/performance; immutability softened for Go; ports per AD-16; API format per api-contracts; edge rate limit; no global coverage gate; TDD -> vendored Superpowers; no includeCoAuthoredBy note; ask before push"
+    },
+    {
+      "source": "ecc",
+      "type": "rule",
+      "name": "golang",
+      "path": ".claude/rules/ecc/golang",
+      "reason": "*.go, go.work, .golangci.yml",
+      "step": "implement",
+      "modified": true,
+      "note": "skipped hooks.md; pkg/config secrets instead of os.Getenv+log.Fatal; gosec via make lint-go; govulncheck per module; tests via make/module paths; integration tag"
+    },
+    {
+      "source": "ecc",
+      "type": "rule",
+      "name": "typescript",
+      "path": ".claude/rules/ecc/typescript",
+      "reason": "tsconfig.base.json, apps/*, packages/*",
+      "step": "implement",
+      "modified": true,
+      "note": "skipped hooks.md; Zod -> generated OpenAPI types + AntD Form rules; RFC 9457/Page types instead of envelope; removed Repository<T>; SPA holds no secrets; Vitest/Playwright commands"
+    },
+    {
+      "source": "ecc",
+      "type": "rule",
+      "name": "react",
+      "path": ".claude/rules/ecc/react",
+      "reason": "apps/web-*/src/*.tsx, eslint-plugin-react-hooks",
+      "step": "implement",
+      "modified": true,
+      "note": "removed RSC/Server Actions/SSR/zod/Next env table; AntD Form + tokens + i18n; deferred token storage/CSRF; gateway CSP; Vitest-only testing; not-installed deps flagged; links redirected"
+    }
+  ]
+}
