@@ -1,0 +1,7 @@
+# gitleaks v8.30 (ci.yml secret scan): default rules, plus one narrow allowlist.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "SealedSecret ciphertext (platform v1 T10): encrypted with the controller's public key, safe to commit; high entropy trips generic-api-key"
+paths = ['''(^|/)deploy/secrets/kind/[^/]+\.sealed\.yaml$''']

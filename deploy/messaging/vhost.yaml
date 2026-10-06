@@ -1,0 +1,8 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: Vhost
+metadata:
+  name: banking
+  namespace: banking-data
+spec:
+  name: banking
+  rabbitmqClusterReference: {name: rmq}

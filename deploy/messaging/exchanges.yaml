@@ -1,0 +1,16 @@
+# Exchanges declared once for every service (events.md § Topology). Services declare only their own queues.
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata: {name: banking-events, namespace: banking-data}
+spec: {name: banking.events, vhost: banking, type: topic, durable: true, autoDelete: false, rabbitmqClusterReference: {name: rmq}}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata: {name: banking-commands, namespace: banking-data}
+spec: {name: banking.commands, vhost: banking, type: direct, durable: true, autoDelete: false, rabbitmqClusterReference: {name: rmq}}
+---
+# Dead-letter exchange: each service binds <queue>.dlq with routing key = <queue>.
+apiVersion: rabbitmq.com/v1beta1
+kind: Exchange
+metadata: {name: banking-dlx, namespace: banking-data}
+spec: {name: banking.dlx, vhost: banking, type: direct, durable: true, autoDelete: false, rabbitmqClusterReference: {name: rmq}}

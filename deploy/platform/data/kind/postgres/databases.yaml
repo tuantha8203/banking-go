@@ -1,0 +1,30 @@
+# One database per service, owned by its migrator role (AD-3, AD-26). Grants to <svc>_app come with each service's first migration.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: pg-core
+  namespace: banking-data
+spec:
+  cluster: {name: pg}
+  name: core
+  owner: core_migrator
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: pg-public
+  namespace: banking-data
+spec:
+  cluster: {name: pg}
+  name: public
+  owner: public_migrator
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: pg-admin
+  namespace: banking-data
+spec:
+  cluster: {name: pg}
+  name: admin
+  owner: admin_migrator

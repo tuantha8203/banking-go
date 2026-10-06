@@ -1,0 +1,58 @@
+# One RabbitMQ user per service (deployment.md § Secrets); credentials from Sealed Secrets rmq-user-<svc>.
+# core is shared by core and core-worker (same codebase, AD-1). Queues are named <service>.<purpose> or by command type.
+apiVersion: rabbitmq.com/v1beta1
+kind: User
+metadata: {name: core, namespace: banking-data}
+spec:
+  importCredentialsSecret: {name: rmq-user-core}
+  rabbitmqClusterReference: {name: rmq}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata: {name: core-banking, namespace: banking-data}
+spec:
+  vhost: banking
+  userReference: {name: core}
+  permissions:
+    configure: '^(core-worker\..*|banking\.(customer|payment)\..*)$'
+    write: '^(banking\.(events|commands|dlx|retry\.[1-3])|core-worker\..*|banking\.(customer|payment)\..*)$'
+    read: '^(banking\.(events|commands|dlx)|core-worker\..*|banking\.(customer|payment)\..*)$'
+  rabbitmqClusterReference: {name: rmq}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: User
+metadata: {name: public-api, namespace: banking-data}
+spec:
+  importCredentialsSecret: {name: rmq-user-public-api}
+  rabbitmqClusterReference: {name: rmq}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata: {name: public-api-banking, namespace: banking-data}
+spec:
+  vhost: banking
+  userReference: {name: public-api}
+  permissions:
+    configure: '^public-api\..*$'
+    write: '^(banking\.(events|dlx|retry\.[1-3])|public-api\..*)$'
+    read: '^(banking\.(events|dlx)|public-api\..*)$'
+  rabbitmqClusterReference: {name: rmq}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: User
+metadata: {name: admin-api, namespace: banking-data}
+spec:
+  importCredentialsSecret: {name: rmq-user-admin-api}
+  rabbitmqClusterReference: {name: rmq}
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata: {name: admin-api-banking, namespace: banking-data}
+spec:
+  vhost: banking
+  userReference: {name: admin-api}
+  permissions:
+    configure: '^admin-api\..*$'
+    write: '^(banking\.events|admin-api\..*)$'
+    read: '^admin-api\..*$'
+  rabbitmqClusterReference: {name: rmq}

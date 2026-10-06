@@ -1,0 +1,22 @@
+# CNPG Cluster pg on kind (spec §8): 1 instance (no HA on kind), PostgreSQL 18.6, 6 managed roles (AD-26).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg
+  namespace: banking-data
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    size: 2Gi
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+    limits: {memory: 512Mi}
+  managed:
+    roles:
+      - {name: core_migrator, ensure: present, login: true, passwordSecret: {name: pg-core-migrator}}
+      - {name: core_app, ensure: present, login: true, passwordSecret: {name: pg-core-app}}
+      - {name: public_migrator, ensure: present, login: true, passwordSecret: {name: pg-public-migrator}}
+      - {name: public_app, ensure: present, login: true, passwordSecret: {name: pg-public-app}}
+      - {name: admin_migrator, ensure: present, login: true, passwordSecret: {name: pg-admin-migrator}}
+      - {name: admin_app, ensure: present, login: true, passwordSecret: {name: pg-admin-app}}

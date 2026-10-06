@@ -1,0 +1,14 @@
+# RabbitmqCluster rmq on kind (spec §8): 1 node, RabbitMQ 4.3.6 (Cluster Operator v2.23.0).
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rmq
+  namespace: banking-data
+spec:
+  replicas: 1
+  image: rabbitmq:4.3.6-management
+  persistence:
+    storage: 2Gi
+  resources:
+    requests: {cpu: 50m, memory: 512Mi}
+    limits: {memory: 768Mi}

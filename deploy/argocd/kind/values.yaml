@@ -6,6 +6,9 @@ repoURL: ""          # git@github.com:<GH_OWNER>/banking-go.git, set by deploy/k
 targetRevision: main
 ghOwner: ""
 addons:
+  - name: namespaces
+    wave: -30
+    path: deploy/platform/namespaces/kind
   - name: gateway-api-crds
     wave: -30
     path: deploy/platform/gateway-api
@@ -45,3 +48,23 @@ addons:
     wave: -18
     path: deploy/platform/cert-manager-issuers/kind
     wait: "--for=condition=Ready clusterissuer/kind-ca clusterissuer/bg-internal-ca --timeout=180s"
+  - name: kind-secrets
+    wave: -18
+    path: deploy/secrets/kind
+  - name: postgres
+    wave: -15
+    path: deploy/platform/data/kind/postgres
+    wait: "-n banking-data --for=condition=Ready cluster.postgresql.cnpg.io/pg --timeout=600s"
+  - name: rabbitmq
+    wave: -15
+    path: deploy/platform/data/kind/rabbitmq
+    wait: "-n banking-data --for=condition=AllReplicasReady rabbitmqcluster/rmq --timeout=600s"
+  - name: seaweedfs
+    wave: -15
+    namespace: banking-data
+    chart: {repo: https://seaweedfs.github.io/seaweedfs/helm, name: seaweedfs, version: 4.48.0}
+    values: [deploy/platform/seaweedfs/values-kind.yaml]
+  - name: messaging
+    wave: -14
+    path: deploy/messaging
+    wait: "-n banking-data --for=condition=Ready exchanges.rabbitmq.com --all --timeout=300s"

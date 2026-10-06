@@ -210,6 +210,10 @@ kind-ca: tools-k8s ## Export the kind root CA to ~/.config/banking-go/kind-ca.cr
 	$(KUBECTL) -n cert-manager get secret kind-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(HOME)/.config/banking-go/kind-ca.crt
 	@echo "CA: $(HOME)/.config/banking-go/kind-ca.crt — e.g. curl --cacert $(HOME)/.config/banking-go/kind-ca.crt https://api.kind.localhost/v1/ping"
 
+.PHONY: seal
+seal: tools-k8s ## Seal kind secrets from deploy/secrets/kind.env (git-ignored) into deploy/secrets/kind/*.sealed.yaml
+	scripts/seal-kind.sh
+
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy

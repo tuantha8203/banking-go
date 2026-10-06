@@ -113,8 +113,8 @@
       "dependencies": [
         "T9"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make seal → 17 \"sealed …\" + \"ok   no plaintext Secret under deploy/\"; deploy/secrets/kind.env 600 + git-ignored. make kind-platform exit 0: waves -30 namespaces, -18 kind-secrets, -15 postgres/rabbitmq/seaweedfs, -14 messaging; check-platform: \"ok   postgres pg: databases + 6 managed roles\", \"ok   rabbitmq rmq: exchanges, retry queues, users\", \"ok   seaweedfs bucket banking-kind\". gitleaks v8.30 (with .gitleaks.toml) on committable deploy/ files: \"no leaks found\". make lint exit 0. Lệch plan: (1) seal-kind.sh gắn label rabbitmq.com/topology-operator=true cho rmq-user-* (webhook Topology Operator v1.20 bắt buộc); (2) thêm .gitleaks.toml allowlist chỉ deploy/secrets/kind/*.sealed.yaml (user duyệt; ciphertext dính generic-api-key); (3) S3 service thật là seaweedfs-all-in-one:8333 (đã sửa Interfaces); (4) docker.io 429 → side-load rabbitmq:4.3.6-management + chrislusf/seaweedfs:4.48 bằng kind load image-archive. RabbitmqCluster có cảnh báo NoWarnings=False MemoryRequestAndLimitDifferent (giữ theo plan)."
     },
     {
       "id": "T11",

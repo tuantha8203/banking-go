@@ -75,7 +75,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
 - [x] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
 - [x] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
-- [ ] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
+- [x] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
 - [ ] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
 - [ ] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
@@ -3304,9 +3304,9 @@ git commit -m "feat(platform): kind add-ons (gateway api, cert-manager, sealed s
 
 **Interfaces:**
 - Consumes: catalog + `kind-platform.sh` (T9); controller cert `~/.config/banking-go/sealed-secrets-cert.pem` (T8/T9); tên Secret do chart dùng (T7).
-- Produces: namespace `banking`, `banking-data`; CNPG `banking-data/pg` (service `pg-rw`), database `core`/`public`/`admin` (owner `<db>_migrator`), 6 role `{core,public,admin}_{migrator,app}`; `banking-data/rmq` (service `rmq`, vhost `banking`), exchange `banking.events` (topic), `banking.commands` (direct), `banking.dlx` (direct), `banking.retry.{1,2,3}` (fanout → queue TTL 10 s / 60 s / 600 s, dead-letter về default exchange), user `core`, `public-api`, `admin-api`; SeaweedFS S3 `seaweedfs-s3.banking-data.svc:8333` (tên service kiểm ở Step 9), bucket `banking-kind`; Secret (sealed): `banking/{core,public-api,admin-api}-migrator-dsn` (key `dsn`), `banking/{core,core-worker,public-api,admin-api}-env` (key `BG_<SVC>_DB_DSN`, `BG_<SVC>_AMQP_URL`, `BG_<SVC>_S3_ACCESS_KEY_ID`, `BG_<SVC>_S3_SECRET_ACCESS_KEY`), `banking-data/pg-<db>-<role>`, `banking-data/rmq-user-<svc>`, `banking-data/seaweedfs-s3-config`; target `make seal`; `scripts/check-no-plain-secrets.sh`.
+- Produces: namespace `banking`, `banking-data`; CNPG `banking-data/pg` (service `pg-rw`), database `core`/`public`/`admin` (owner `<db>_migrator`), 6 role `{core,public,admin}_{migrator,app}`; `banking-data/rmq` (service `rmq`, vhost `banking`), exchange `banking.events` (topic), `banking.commands` (direct), `banking.dlx` (direct), `banking.retry.{1,2,3}` (fanout → queue TTL 10 s / 60 s / 600 s, dead-letter về default exchange), user `core`, `public-api`, `admin-api`; SeaweedFS S3 `seaweedfs-all-in-one.banking-data.svc:8333` (service all-in-one của chart 4.48.0, port `swfs-s3`; đã kiểm ở Step 9), bucket `banking-kind`; Secret (sealed): `banking/{core,public-api,admin-api}-migrator-dsn` (key `dsn`), `banking/{core,core-worker,public-api,admin-api}-env` (key `BG_<SVC>_DB_DSN`, `BG_<SVC>_AMQP_URL`, `BG_<SVC>_S3_ACCESS_KEY_ID`, `BG_<SVC>_S3_SECRET_ACCESS_KEY`), `banking-data/pg-<db>-<role>`, `banking-data/rmq-user-<svc>`, `banking-data/seaweedfs-s3-config`; target `make seal`; `scripts/check-no-plain-secrets.sh`.
 
-- [ ] **Step 1: Viết check thất bại** — thêm cuối `deploy/kind/check-platform.sh`:
+- [x] **Step 1: Viết check thất bại** — thêm cuối `deploy/kind/check-platform.sh`:
 
 ```bash
 # --- waves -18/-15/-14: secrets + data
@@ -3355,7 +3355,7 @@ echo "ok   no plaintext Secret under deploy/"
 Run: `chmod +x scripts/check-no-plain-secrets.sh && deploy/kind/check-platform.sh`
 Expected: mục cũ `ok …`, sau đó `FAIL` (CRD/cluster `pg` chưa có: `clusters.postgresql.cnpg.io "pg" not found`).
 
-- [ ] **Step 2: Namespace + data manifest**
+- [x] **Step 2: Namespace + data manifest**
 
 `deploy/platform/namespaces/kind/namespaces.yaml`:
 ```yaml
@@ -3474,7 +3474,7 @@ allInOne:
     limits: {memory: 512Mi}
 ```
 
-- [ ] **Step 3: Topology RabbitMQ** (`deploy/messaging/`, events.md § Topology)
+- [x] **Step 3: Topology RabbitMQ** (`deploy/messaging/`, events.md § Topology)
 
 `deploy/messaging/vhost.yaml`:
 ```yaml
@@ -3641,7 +3641,7 @@ spec:
   rabbitmqClusterReference: {name: rmq}
 ```
 
-- [ ] **Step 4: Catalog** — thêm vào cuối `addons:` của `deploy/argocd/kind/values.yaml`, và chèn `namespaces` lên đầu danh sách:
+- [x] **Step 4: Catalog** — thêm vào cuối `addons:` của `deploy/argocd/kind/values.yaml`, và chèn `namespaces` lên đầu danh sách:
 
 ```yaml
   - name: namespaces
@@ -3671,7 +3671,7 @@ spec:
     wait: "-n banking-data --for=condition=Ready exchanges.rabbitmq.com --all --timeout=300s"
 ```
 
-- [ ] **Step 5: `make seal`**
+- [x] **Step 5: `make seal`**
 
 `deploy/secrets/kind.env.example`:
 ```dotenv
@@ -3815,24 +3815,24 @@ seal: tools-k8s ## Seal kind secrets from deploy/secrets/kind.env (git-ignored) 
 # BG_ADMIN_API_AMQP_URL=amqp://banking:banking@localhost:5672/
 ```
 
-- [ ] **Step 6: Seal (cần controller + cert từ T9)**
+- [x] **Step 6: Seal (cần controller + cert từ T9)**
 
 Run: `chmod +x scripts/seal-kind.sh && make seal && ls deploy/secrets/kind | wc -l && stat -c %a deploy/secrets/kind.env`
 Expected: 17 dòng `sealed …`, `ok   no plaintext Secret under deploy/`; `17`; `600`.
 
-- [ ] **Step 7: Cài data + check**
+- [x] **Step 7: Cài data + check**
 
 Run: `make kind-platform`
 Expected: thêm `== wave -30: namespaces`, `== wave -18: kind-secrets`, `== wave -15: postgres|rabbitmq|seaweedfs`, `== wave -14: messaging`; check in `ok   postgres pg: databases + 6 managed roles`, `ok   rabbitmq rmq: …`, `ok   seaweedfs bucket banking-kind`.
 
-- [ ] **Step 8: Không lộ secret**
+- [x] **Step 8: Không lộ secret**
 
 Run: `git status --porcelain deploy/secrets && git check-ignore deploy/secrets/kind.env && docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.30.0 dir /repo/deploy --redact --exit-code 1`
 Expected: chỉ `*.sealed.yaml` + `kind.env.example` là file mới; `deploy/secrets/kind.env` bị ignore; gitleaks `no leaks found`.
 
-- [ ] **Step 9: Ghi tên service S3 thật** — Run: `kubectl -n banking-data get svc -l app.kubernetes.io/name=seaweedfs -o name`; nếu tên khác `seaweedfs-s3`, cập nhật dòng Interfaces "Produces" của task này trong plan (không đổi code — service chưa đọc S3 endpoint).
+- [x] **Step 9: Ghi tên service S3 thật** — Run: `kubectl -n banking-data get svc -l app.kubernetes.io/name=seaweedfs -o name`; nếu tên khác `seaweedfs-s3`, cập nhật dòng Interfaces "Produces" của task này trong plan (không đổi code — service chưa đọc S3 endpoint).
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add deploy/platform/namespaces deploy/platform/data deploy/platform/seaweedfs deploy/messaging deploy/secrets/kind deploy/secrets/kind.env.example \
