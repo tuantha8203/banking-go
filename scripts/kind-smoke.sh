@@ -72,4 +72,13 @@ for _ in $(seq 36); do
 done
 awk -v v="$rps" 'BEGIN{exit !(v > 0)}' || fail "Prometheus RED rate for public-api is 0"
 ok "Prometheus RED rate public-api = $rps req/s"
+
+# 6. Dashboards as code are loaded in Grafana (spec criterion 5)
+guser=$(kubectl -n monitoring get secret kube-prometheus-stack-grafana -o jsonpath='{.data.admin-user}' | base64 -d)
+gpass=$(kubectl -n monitoring get secret kube-prometheus-stack-grafana -o jsonpath='{.data.admin-password}' | base64 -d)
+for uid in bg-service-overview bg-platform; do
+  curl -sk --max-time 10 -u "$guser:$gpass" "https://grafana.kind.localhost/api/dashboards/uid/$uid" \
+    | jq -e --arg u "$uid" '.dashboard.uid == $u' >/dev/null || fail "Grafana dashboard $uid missing"
+  ok "Grafana dashboard $uid"
+done
 echo "kind-smoke: all checks passed"

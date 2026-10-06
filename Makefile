@@ -244,6 +244,9 @@ obs-gen: ## Regenerate PrometheusRule / dashboard ConfigMaps from observability/
 obs-gen-check: obs-gen ## Fail if generated observability objects differ from the committed files (CI)
 	git diff --exit-code -- deploy/platform/observability
 	@test -z "$$(git status --porcelain -- deploy/platform/observability)" || { git status --porcelain -- deploy/platform/observability; exit 1; }
+.PHONY: dashboards-test
+dashboards-test: ## Validate observability/dashboards/*.json (uids, datasources, required panels)
+	scripts/test-dashboards.sh
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
