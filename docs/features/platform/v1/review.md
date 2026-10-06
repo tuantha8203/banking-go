@@ -29,3 +29,22 @@ Rubric (1–5): spec 4 · correctness 3 · security 4 · test evidence 4 · main
   (không có gì để backup), lỗi kubectl → exit ≠ 0. `kind-down`: backup chỉ khi cluster tồn tại, không còn `-` → backup lỗi thì dừng
   trước delete. `kind-ca`: `--context kind-$(KIND_CLUSTER)`.
 - GREEN: `deploy/kind/test-sealed-key.sh` → 3 dòng `ok`, `sealed-key: all checks passed`; `make test` exit 0; `make lint` exit 0.
+
+## Vòng 2 — 2026-10-06
+
+Bước a: `ocr delegate preview -c 9a5ad59` (3 file reviewable) — không có lỗi mới ở mức High/Medium.
+Bước b: subagent reviewer mới, tập trung vào fix F1 và các lỗi vòng 1. Đã chạy `deploy/kind/test-sealed-key.sh` (exit 0;
+sha256 `~/.config/banking-go/*` không đổi, cluster vẫn còn); chạy test trên bản `9a5ad59^` → exit 1 ở bước 1 (RED thật).
+Bước 3 RED đã chạy ở vòng 1 (Makefile cũ → `delete cluster --name banking-go` dù backup lỗi).
+
+| id | Mức | File | Lỗi | Lớp | Trạng thái |
+|---|---|---|---|---|---|
+| F1 | — | — | Đã sửa đủ ở `sealed-key.sh` (restore + backup), `kind-down`, `kind-ca` | — | đóng |
+| R1 | Minor | `Makefile:201` | `kind get clusters` lỗi → `if` false → bỏ backup im lặng rồi vẫn delete | a | chờ owner quyết |
+| R2 | Minor | `deploy/kind/sealed-key.sh:27` | "Chưa có key → exit 0" cũng làm post hook `kind-platform` (`deploy/argocd/kind/values.yaml:26`) qua im lặng; `check-platform.sh:30` chỉ kiểm file backup tồn tại | a | chờ owner quyết |
+| R3 | Minor | `deploy/kind/test-sealed-key.sh:39` | Test đọc `KIND_CLUSTER` từ env, Makefile `:=` bỏ qua env → tên khác mặc định thì bước 3 fail sai lý do; chưa có target make/CI chạy test | a | chờ owner quyết |
+| R4 | Minor | `tasks.json` (T8 evidence), `plan.md:2913` | Còn mô tả hành vi cũ (`-` nuốt lỗi backup) | b | chờ owner quyết |
+
+Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · maintainability 4.
+**Verdict: Accept** — F1 (Major duy nhất) đã sửa và có test hồi quy RED/GREEN; còn lại Minor (F2, F5, F6, N1, R1–R4) và lớp b
+(F3 plan T21, F4 anti-affinity v2) chờ owner quyết.
