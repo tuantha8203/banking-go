@@ -221,6 +221,10 @@ kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.ya
 	IMAGE_PREFIX=$(IMAGE_PREFIX) IMAGE_TAG=$(IMAGE_TAG) scripts/kind-apps.sh
 	deploy/kind/check-apps.sh
 
+.PHONY: kind-smoke
+kind-smoke: tools-k8s ## Smoke the kind env: 4 hosts via Traefik, migration Jobs, running digests vs deploy/releases/kind.yaml
+	scripts/kind-smoke.sh
+
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy

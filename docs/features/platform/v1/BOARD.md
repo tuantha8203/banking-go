@@ -1,11 +1,10 @@
 # Board — platform v1 — sprint S1
 
-Tiến độ: **11/12 done** · 0 doing · 0 blocked · 0 dropped
+Tiến độ: **12/12 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Doing
 
 ## Todo
-- [ ] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
 ## Blocked
 
@@ -21,6 +20,7 @@ Tiến độ: **11/12 done** · 0 doing · 0 blocked · 0 dropped
 - [x] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
 - [x] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
 - [x] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
+- [x] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
 ## Dropped
 

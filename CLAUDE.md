@@ -10,6 +10,7 @@ Core banking tối giản chuẩn kỹ thuật production (học + portfolio, kh
 - Run: `make run` (compose: postgres, rabbitmq, seaweedfs) rồi chạy service theo hướng dẫn in ra; `make up-obs` thêm OTel Collector
 - Tool Go pin trong `tools/` (ngoài go.work): `cd tools && GOWORK=off go tool sqlc|goose ...`
 - pnpm: luôn qua `npx -y pnpm@12.9.1` (Makefile đã bọc)
+- kind (platform v1): `make tools-k8s` → `make kind-up` → `make kind-platform` → `make seal` (lần đầu) → `make images kind-load kind-apps` → `make kind-smoke`; xóa: `make kind-down` (backup key Sealed Secrets ở ~/.config/banking-go/)
 
 ## Foundation (đọc file liên quan khi cần, không đọc hết)
 - Sản phẩm & phạm vi: docs/foundation/product.md · Thuật ngữ: docs/foundation/glossary.md
@@ -75,3 +76,5 @@ Core banking tối giản chuẩn kỹ thuật production (học + portfolio, kh
 - pnpm 12 chặn package mới phát hành (minimum release age) → có thể phải pin bản cũ hơn một chút.
 - File sinh ra (pkg/gen, api/openapi, lockfile) bị hook chặn sửa tay: sửa nguồn rồi `make gen` / chạy lệnh package manager.
 - Migration đã có trên main: không sửa, tạo file mới (hook chặn).
+- kind cần cổng 80/443 trống trên host và ~6–7 GB RAM; `*.kind.localhost` tự trỏ 127.0.0.1 (curl/trình duyệt), CA: `make kind-ca`.
+- S1/S2 cài kind bằng helm/kubectl trực tiếp (`kind-platform`, `kind-apps`) — đường tạm chỉ cho kind, S3 chuyển sang Argo CD.

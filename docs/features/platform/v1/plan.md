@@ -77,7 +77,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
 - [x] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
 - [x] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
-- [ ] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
+- [x] T12: `make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)
 
 Sprint S2 — "Observability as code trên kind"
 - [ ] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
@@ -3950,7 +3950,7 @@ git commit -m "feat(platform): deploy the 10 charts on kind with local images an
 - Consumes: host + route (T7, T9), app chạy (T11), `deploy/deployables.tsv`, `yq`.
 - Produces: `scripts/kind-smoke.sh` (biến `RELEASES_FILE`, mặc định `deploy/releases/kind.yaml`; có hàm `check_json`, `check_html`, phần digest); target `make kind-smoke`. T13/T15/T16 thêm phần telemetry vào cùng script; T20/T21 dùng nó để kiểm rollback.
 
-- [ ] **Step 1: Viết smoke** — `scripts/kind-smoke.sh`
+- [x] **Step 1: Viết smoke** — `scripts/kind-smoke.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -4009,12 +4009,12 @@ fi
 echo "kind-smoke: all checks passed"
 ```
 
-- [ ] **Step 2: Chạy khi chưa có target để thấy fail**
+- [x] **Step 2: Chạy khi chưa có target để thấy fail**
 
 Run: `make kind-smoke`
 Expected: `make: *** No rule to make target 'kind-smoke'`.
 
-- [ ] **Step 3: `Makefile`**
+- [x] **Step 3: `Makefile`**
 
 ```make
 .PHONY: kind-smoke
@@ -4022,7 +4022,7 @@ kind-smoke: tools-k8s ## Smoke the kind env: 4 hosts via Traefik, migration Jobs
 	scripts/kind-smoke.sh
 ```
 
-- [ ] **Step 4: Chạy pass + thử fail thật**
+- [x] **Step 4: Chạy pass + thử fail thật**
 
 Run: `chmod +x scripts/kind-smoke.sh && make kind-smoke`
 Expected: 4 dòng host `ok`, 3 dòng job `ok`, `skip digest check: … not found`, `kind-smoke: all checks passed`.
@@ -4030,7 +4030,7 @@ Expected: 4 dòng host `ok`, 3 dòng job `ok`, `skip digest check: … not found
 Run: `kubectl -n banking scale deploy/public-api --replicas=0 && sleep 5; make kind-smoke; kubectl -n banking scale deploy/public-api --replicas=1`
 Expected: `FAIL: https://api.kind.localhost/v1/ping → 503 …` (exit ≠ 0), rồi khôi phục.
 
-- [ ] **Step 5: `CLAUDE.md`** — thêm vào mục `## Commands`:
+- [x] **Step 5: `CLAUDE.md`** — thêm vào mục `## Commands`:
 
 ```markdown
 - kind (platform v1): `make tools-k8s` → `make kind-up` → `make kind-platform` → `make seal` (lần đầu) → `make images kind-load kind-apps` → `make kind-smoke`; xóa: `make kind-down` (backup key Sealed Secrets ở ~/.config/banking-go/)
@@ -4041,7 +4041,7 @@ và vào `## Gotchas`:
 - S1/S2 cài kind bằng helm/kubectl trực tiếp (`kind-platform`, `kind-apps`) — đường tạm chỉ cho kind, S3 chuyển sang Argo CD.
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/kind-smoke.sh Makefile CLAUDE.md
