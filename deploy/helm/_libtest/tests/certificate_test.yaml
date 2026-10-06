@@ -1,0 +1,25 @@
+suite: lib internal mTLS certificate
+templates:
+  - templates/all.yaml
+tests:
+  - it: issues a client+server certificate from the internal CA and mounts it
+    release:
+      namespace: banking
+    set:
+      mtls: {enabled: true}
+    asserts:
+      - hasDocuments: {count: 4}
+      - equal: {path: spec.issuerRef, value: {group: cert-manager.io, kind: ClusterIssuer, name: bg-internal-ca}}
+        documentSelector: {path: kind, value: Certificate}
+      - equal: {path: spec.secretName, value: libtest-mtls}
+        documentSelector: {path: kind, value: Certificate}
+      - equal: {path: spec.usages, value: [server auth, client auth]}
+        documentSelector: {path: kind, value: Certificate}
+      - contains:
+          path: spec.dnsNames
+          content: libtest.banking.svc
+        documentSelector: {path: kind, value: Certificate}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: mtls, mountPath: /etc/bg/mtls, readOnly: true}
+        documentSelector: {path: kind, value: Deployment}

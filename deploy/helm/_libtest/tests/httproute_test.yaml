@@ -1,0 +1,19 @@
+suite: lib HTTPRoute (Gateway API v1.6)
+templates:
+  - templates/all.yaml
+tests:
+  - it: attaches route.host to the Traefik websecure listener
+    set:
+      route: {enabled: true, host: api.kind.localhost, pathPrefix: /}
+    documentSelector: {path: kind, value: HTTPRoute}
+    asserts:
+      - equal: {path: apiVersion, value: gateway.networking.k8s.io/v1}
+      - equal: {path: "spec.parentRefs[0]", value: {name: traefik-gateway, namespace: traefik, sectionName: websecure}}
+      - equal: {path: spec.hostnames, value: [api.kind.localhost]}
+      - equal: {path: "spec.rules[0].matches[0].path", value: {type: PathPrefix, value: /}}
+      - equal: {path: "spec.rules[0].backendRefs[0]", value: {name: libtest, port: 8081}}
+  - it: requires route.host when enabled
+    set:
+      route: {enabled: true, host: "", pathPrefix: /}
+    asserts:
+      - failedTemplate: {errorPattern: "route.host is required"}

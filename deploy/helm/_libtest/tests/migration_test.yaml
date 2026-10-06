@@ -1,0 +1,41 @@
+suite: lib migration PreSync Job (AD-26)
+templates:
+  - templates/all.yaml
+tests:
+  - it: renders no Job when migration is disabled
+    asserts:
+      - hasDocuments: {count: 3}
+  - it: runs '<command> migrate up' as an Argo CD PreSync hook before the rollout
+    set:
+      migration: {enabled: true, dsnSecret: libtest-migrator-dsn}
+    documentSelector: {path: kind, value: Job}
+    asserts:
+      - equal: {path: metadata.name, value: libtest-migrate}
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/hook\"]", value: PreSync}
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/hook-delete-policy\"]", value: BeforeHookCreation}
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "-1"}
+      - equal: {path: "metadata.annotations[\"helm.sh/hook\"]", value: "pre-install,pre-upgrade"}
+      - equal: {path: "spec.template.spec.containers[0].command", value: [/usr/local/bin/libtest, migrate, up]}
+      - equal: {path: "spec.template.spec.containers[0].image", value: "ghcr.io/acme/banking-go/libtest:local"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BG_LIBTEST_MIGRATOR_DSN
+            valueFrom: {secretKeyRef: {name: libtest-migrator-dsn, key: dsn}}
+      - equal: {path: spec.template.spec.restartPolicy, value: Never}
+      - equal: {path: "spec.template.metadata.labels[\"app.kubernetes.io/name\"]", value: libtest-migrate}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+  - it: uses the same digest as the Deployment
+    set:
+      migration: {enabled: true, dsnSecret: libtest-migrator-dsn}
+      libtest: {image: ghcr.io/acme/banking-go/core, digest: "sha256:3333333333333333333333333333333333333333333333333333333333333333"}
+    documentSelector: {path: kind, value: Job}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/acme/banking-go/core@sha256:3333333333333333333333333333333333333333333333333333333333333333
+  - it: requires migration.dsnSecret
+    set:
+      migration: {enabled: true, dsnSecret: ""}
+    asserts:
+      - failedTemplate: {errorPattern: "migration.dsnSecret is required"}

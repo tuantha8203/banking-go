@@ -1,0 +1,14 @@
+suite: lib PodDisruptionBudget
+templates:
+  - templates/all.yaml
+tests:
+  - it: keeps one pod available when there are at least 2 replicas
+    set:
+      replicas: 2
+    documentSelector: {path: kind, value: PodDisruptionBudget}
+    asserts:
+      - equal: {path: spec.minAvailable, value: 1}
+      - equal: {path: "spec.selector.matchLabels[\"app.kubernetes.io/name\"]", value: libtest}
+  - it: renders no PDB for a single replica (kind)
+    asserts:
+      - hasDocuments: {count: 3}
