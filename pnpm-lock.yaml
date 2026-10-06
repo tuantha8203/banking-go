@@ -196,6 +196,9 @@ importers:
       '@banking-go/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@banking-go/runtime-config':
+        specifier: workspace:*
+        version: link:../../packages/runtime-config
       '@banking-go/theme':
         specifier: workspace:*
         version: link:../../packages/theme
@@ -251,6 +254,9 @@ importers:
       '@banking-go/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@banking-go/runtime-config':
+        specifier: workspace:*
+        version: link:../../packages/runtime-config
       '@banking-go/theme':
         specifier: workspace:*
         version: link:../../packages/theme

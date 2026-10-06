@@ -52,8 +52,8 @@
       "dependencies": [
         "T3"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make test-one WEB=@banking-go/runtime-config → 3 passed; make images (6 image, exit 0) && make image-smoke → 8× Go /livez + 2× \"ok web-* nginx: SPA, config.js, cache headers, CSP\" (uid 101, --read-only + tmpfs /tmp) + 3× migrate no-op, \"image-smoke: all images passed\"; make test-web exit 0 (9 tests); make lint exit 0; make e2e 2 passed; ./init.sh Baseline OK. images-spa forwards PROXY_BUILD_ARGS like images-go. Size web-*:local 90.9MB."
     },
     {
       "id": "T5",

@@ -1,0 +1,28 @@
+# deployment.md § SPA: index.html + config.js no-cache, hashed assets immutable, SPA fallback, /healthz for probes.
+server {
+  listen 8080;
+  root /usr/share/nginx/html;
+
+  location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "ok\n";
+  }
+
+  location = /config.js {
+    include /tmp/security-headers.inc;
+    add_header Cache-Control "no-cache" always;
+  }
+
+  location /assets/ {
+    include /tmp/security-headers.inc;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    try_files $uri =404;
+  }
+
+  location / {
+    include /tmp/security-headers.inc;
+    add_header Cache-Control "no-cache" always;
+    try_files $uri $uri/ /index.html;
+  }
+}

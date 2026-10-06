@@ -69,7 +69,7 @@ Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, 
 - [x] T1: Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)
 - [x] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [x] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
-- [ ] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
+- [x] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 - [ ] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 - [ ] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [ ] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)

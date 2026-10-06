@@ -1,11 +1,10 @@
 # Board — platform v1 — sprint S1
 
-Tiến độ: **3/12 done** · 0 doing · 0 blocked · 0 dropped
+Tiến độ: **4/12 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Doing
 
 ## Todo
-- [ ] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 - [ ] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 - [ ] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [ ] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
@@ -21,6 +20,7 @@ Tiến độ: **3/12 done** · 0 doing · 0 blocked · 0 dropped
 - [x] T1: Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)
 - [x] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [x] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
+- [x] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
 
 ## Dropped
 
