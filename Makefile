@@ -197,8 +197,8 @@ GH_OWNER ?=
 kind-up: tools-k8s ## Create/refresh the kind cluster (idempotent): k8s 1.36, restore Sealed Secrets key, Argo CD
 	deploy/kind/bootstrap.sh
 	deploy/kind/check-cluster.sh
-kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster
-	-deploy/kind/sealed-key.sh backup
+kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster (aborts if the backup fails)
+	if $(KIND) get clusters 2>/dev/null | grep -qx $(KIND_CLUSTER); then deploy/kind/sealed-key.sh backup; fi
 	$(KIND) delete cluster --name $(KIND_CLUSTER)
 
 .PHONY: kind-platform kind-ca
@@ -207,7 +207,7 @@ kind-platform: tools-k8s ## Install kind add-ons from deploy/argocd/kind/values.
 	deploy/kind/check-platform.sh
 kind-ca: tools-k8s ## Export the kind root CA to ~/.config/banking-go/kind-ca.crt (curl --cacert / trust store)
 	@mkdir -p $(HOME)/.config/banking-go
-	$(KUBECTL) -n cert-manager get secret kind-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(HOME)/.config/banking-go/kind-ca.crt
+	$(KUBECTL) --context kind-$(KIND_CLUSTER) -n cert-manager get secret kind-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(HOME)/.config/banking-go/kind-ca.crt
 	@echo "CA: $(HOME)/.config/banking-go/kind-ca.crt — e.g. curl --cacert $(HOME)/.config/banking-go/kind-ca.crt https://api.kind.localhost/v1/ping"
 
 .PHONY: seal
