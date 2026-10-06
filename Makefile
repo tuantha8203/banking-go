@@ -189,6 +189,19 @@ helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with test
 	done
 
 # ---------------------------------------------------------------------------------------------
+# kind env (ADR 0011). Never points at another cluster: scripts check the kubectl context.
+KIND_CLUSTER := banking-go
+GH_OWNER ?=
+
+.PHONY: kind-up kind-down
+kind-up: tools-k8s ## Create/refresh the kind cluster (idempotent): k8s 1.36, restore Sealed Secrets key, Argo CD
+	deploy/kind/bootstrap.sh
+	deploy/kind/check-cluster.sh
+kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster
+	-deploy/kind/sealed-key.sh backup
+	$(KIND) delete cluster --name $(KIND_CLUSTER)
+
+# ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
 up: ## Start local deps (postgres, rabbitmq, seaweedfs) and wait until healthy
 	$(COMPOSE) up -d --wait

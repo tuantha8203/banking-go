@@ -1,11 +1,10 @@
 # Board — platform v1 — sprint S1
 
-Tiến độ: **7/12 done** · 0 doing · 0 blocked · 0 dropped
+Tiến độ: **8/12 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Doing
 
 ## Todo
-- [ ] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
 - [ ] T9: Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`
 - [ ] T10: Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`
 - [ ] T11: `make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed
@@ -21,6 +20,7 @@ Tiến độ: **7/12 done** · 0 doing · 0 blocked · 0 dropped
 - [x] T5: Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest
 - [x] T6: Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest
 - [x] T7: 10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)
+- [x] T8: kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`
 
 ## Dropped
 

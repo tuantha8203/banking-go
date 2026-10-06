@@ -93,8 +93,8 @@
       "dependencies": [
         "T1"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "deploy/kind/check-cluster.sh trước implement → \"kubectl context is '', want kind-banking-go\", exit 1 (RED). make kind-up lần 1 → \"[bootstrap] creating cluster banking-go\", Argo CD chart 10.9.6 REVISION 1, \"ok   kind cluster banking-go: 3 nodes v1.36.4, 80/443 on control-plane, Argo CD running\", exit 0 (5m58s, gồm pull image qua proxy); lần 2 → \"cluster banking-go exists\", REVISION 2, ok, exit 0 (9s). make kind-down → \"[sealed-key] no controller key in kube-system yet\" (bỏ qua nhờ -), xóa 3 node, exit 0; make kind-up dựng lại → ok, exit 0 (2m55s). sealed-key.sh với BG_CONFIG_DIR tạm + secret giả có nhãn sealed-secrets-key: backup ghi key 0600 (dir 700, không để lại .tmp khi --fetch-cert lỗi vì chưa có controller), restore apply lại secret; arg sai → usage exit 2. make lint → exit 0. Lệch plan: thêm trap xóa file .tmp trong sealed-key.sh. Không có shellcheck trên máy (chỉ bash -n)."
     },
     {
       "id": "T9",
