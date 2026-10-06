@@ -1,0 +1,30 @@
+# Alertmanager config for env kind (observability.md § Routing, staging variant without email):
+# critical + Watchdog → Telegram; everything else → "null" (kind has no SLO commitment, ADR 0011).
+# Rendered by scripts/render-alertmanager.sh and sealed by `make seal` into monitoring/alertmanager-kind-config.
+global:
+  resolve_timeout: 5m
+route:
+  receiver: "null"
+  group_by: [alertname, service, env]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    - matchers: ['alertname="Watchdog"']
+      receiver: telegram
+      repeat_interval: 12h
+    - matchers: ['severity="critical"']
+      receiver: telegram
+      repeat_interval: 1h
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: [alertname, service]
+receivers:
+  - name: "null"
+  - name: telegram
+    telegram_configs:
+      - bot_token: '${TELEGRAM_BOT_TOKEN}'
+        chat_id: ${TELEGRAM_CHAT_ID}
+        send_resolved: true
+        parse_mode: HTML

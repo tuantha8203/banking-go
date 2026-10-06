@@ -76,4 +76,10 @@ seal banking public-api-env \
 seal banking admin-api-env \
   --from-literal=BG_ADMIN_API_DB_DSN="$(dsn admin_app "$PG_ADMIN_APP_PASSWORD" admin)" \
   --from-literal=BG_ADMIN_API_AMQP_URL="$(amqp admin-api "$RMQ_ADMIN_API_PASSWORD")"
+# monitoring: Alertmanager config with the Telegram receiver (T16); skipped until the owner fills TELEGRAM_*.
+if [[ -n ${TELEGRAM_BOT_TOKEN:-} && -n ${TELEGRAM_CHAT_ID:-} ]]; then
+  seal monitoring alertmanager-kind-config --from-file=alertmanager.yaml=<("$ROOT/scripts/render-alertmanager.sh")
+else
+  echo "skip monitoring/alertmanager-kind-config: set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in $ENV_FILE"
+fi
 "$ROOT/scripts/check-no-plain-secrets.sh"
