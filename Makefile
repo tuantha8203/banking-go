@@ -34,11 +34,36 @@ $(TOOL_STAMP): tools/go.mod tools/go.sum
 		github.com/sqlc-dev/sqlc/cmd/sqlc \
 		github.com/pressly/goose/v3/cmd/goose \
 		google.golang.org/protobuf/cmd/protoc-gen-go \
-		google.golang.org/grpc/cmd/protoc-gen-go-grpc
+		google.golang.org/grpc/cmd/protoc-gen-go-grpc \
+		sigs.k8s.io/kind \
+		github.com/yannh/kubeconform/cmd/kubeconform \
+		github.com/mikefarah/yq/v4
 	@touch $@
 
 .PHONY: tools
 tools: $(TOOL_STAMP) ## Build pinned Go tools into ./bin
+
+# k8s/devops CLIs (platform v1): Go tools above + checksum-verified downloads (tools/k8s-tools.lock).
+KIND        := $(BIN)/kind
+KUBECTL     := $(BIN)/kubectl
+HELM        := $(BIN)/helm
+KUBECONFORM := $(BIN)/kubeconform
+YQ          := $(BIN)/yq
+PROMTOOL    := $(BIN)/promtool
+AMTOOL      := $(BIN)/amtool
+KUBESEAL    := $(BIN)/kubeseal
+ACTIONLINT  := $(BIN)/actionlint
+COSIGN      := $(BIN)/cosign
+GH          := $(BIN)/gh
+export HELM_PLUGINS := $(BIN)/helm-plugins
+
+K8S_TOOLS_STAMP := $(BIN)/.k8s-tools-stamp
+$(K8S_TOOLS_STAMP): tools/k8s-tools.lock scripts/install-k8s-tools.sh
+	scripts/install-k8s-tools.sh $(BIN)
+	@touch $@
+
+.PHONY: tools-k8s
+tools-k8s: $(TOOL_STAMP) $(K8S_TOOLS_STAMP) ## Pinned kind/kubectl/helm(+unittest)/kubeconform/yq/promtool/amtool/kubeseal/actionlint/cosign/gh in ./bin
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: build build-go build-web

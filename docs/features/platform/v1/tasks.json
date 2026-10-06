@@ -24,8 +24,8 @@
       "sprint": "S1",
       "name": "Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)",
       "dependencies": [],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "make tools-k8s && scripts/check-k8s-tools.sh → 12 \"ok\", \"all k8s tools pinned\", exit 0; make gen && git diff --exit-code pkg/gen services/*/api/openapi → exit 0; make lint → exit 0; bin/actionlint .github/workflows/*.yml → exit 0. Lệch plan: actionlint tải binary + sha256 (tools/k8s-tools.lock) thay vì go tool — actionlint v1.7.12 cần go.yaml.in/yaml/v4 rc.3, yq v4.54.1 kéo rc.6 (API vỡ), không build chung một go.mod."
     },
     {
       "id": "T2",

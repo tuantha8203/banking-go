@@ -66,7 +66,7 @@ Quy ước tên trên cluster:
 ## Danh sách task
 
 Sprint S1 — "Image + chart chạy trên kind (cài bằng helm trực tiếp, chưa cần GitHub)"
-- [ ] T1: Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)
+- [x] T1: Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)
 - [ ] T2: Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api
 - [ ] T3: Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`
 - [ ] T4: Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)
@@ -111,7 +111,7 @@ Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bư�
 
 Version đã kiểm ngày 2026-10-06 (`https://github.com/<org>/<repo>/releases/latest`, Docker Hub, proxy.golang.org): kind v0.33.0, kubectl v1.36.5 (`dl.k8s.io/release/stable-1.36.txt`), helm v4.3.0, kubeconform v0.8.0, helm-unittest v1.2.1, yq v4.54.1, prometheus v3.15.0 (promtool), alertmanager v0.34.1 (amtool), sealed-secrets v0.40.0 (kubeseal), actionlint v1.7.12, cosign v3.1.3 và gh v2.102.0 (cho nghiệm thu S3: `cosign verify`, `gh run watch`; máy dev chưa có `gh`). `go tool` cho tool thuần Go nhẹ (kind, kubeconform, actionlint, yq); tải + sha256 cho tool kéo client-go/Prometheus nặng hoặc phát hành dạng binary (kubectl, helm, promtool, amtool, kubeseal, cosign, gh) và plugin helm-unittest.
 
-- [ ] **Step 1: Viết check thất bại** — `scripts/check-k8s-tools.sh`
+- [x] **Step 1: Viết check thất bại** — `scripts/check-k8s-tools.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -140,12 +140,12 @@ expect 'gh version 2\.102\.0'                 "$B/gh" --version
 echo "all k8s tools pinned"
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `chmod +x scripts/check-k8s-tools.sh && scripts/check-k8s-tools.sh`
 Expected: `FAIL: bin/kind version did not run: …No such file or directory` (exit 1).
 
-- [ ] **Step 3: Thêm tool Go vào `tools/go.mod`**
+- [x] **Step 3: Thêm tool Go vào `tools/go.mod`**
 
 Run:
 ```bash
@@ -154,7 +154,7 @@ cd tools && GOWORK=off go get -tool sigs.k8s.io/kind@v0.33.0 github.com/yannh/ku
 ```
 Expected: khối `tool (…)` có thêm 4 dòng; `go.sum` cập nhật.
 
-- [ ] **Step 4: Tạo `tools/k8s-tools.lock`**
+- [x] **Step 4: Tạo `tools/k8s-tools.lock`**
 
 ```text
 # Pinned k8s/devops CLIs downloaded into ./bin by scripts/install-k8s-tools.sh (linux-amd64 only).
@@ -169,7 +169,7 @@ cosign         v3.1.3   4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df
 gh             v2.102.0 bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386  https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_linux_amd64.tar.gz
 ```
 
-- [ ] **Step 5: Tạo `scripts/install-k8s-tools.sh`**
+- [x] **Step 5: Tạo `scripts/install-k8s-tools.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -206,7 +206,7 @@ while read -r name version sha url; do
 done < "$LOCK"
 ```
 
-- [ ] **Step 6: Sửa `Makefile`** — thay khối `TOOL_STAMP` hiện có và thêm biến/target ngay dưới `.PHONY: tools`:
+- [x] **Step 6: Sửa `Makefile`** — thay khối `TOOL_STAMP` hiện có và thêm biến/target ngay dưới `.PHONY: tools`:
 
 ```make
 TOOL_STAMP := $(BIN)/.tools-stamp
@@ -249,17 +249,17 @@ $(K8S_TOOLS_STAMP): tools/k8s-tools.lock scripts/install-k8s-tools.sh
 tools-k8s: $(TOOL_STAMP) $(K8S_TOOLS_STAMP) ## Pinned kind/kubectl/helm(+unittest)/kubeconform/yq/promtool/amtool/kubeseal/actionlint/cosign/gh in ./bin
 ```
 
-- [ ] **Step 7: Chạy để thấy pass**
+- [x] **Step 7: Chạy để thấy pass**
 
 Run: `chmod +x scripts/install-k8s-tools.sh && make tools-k8s && scripts/check-k8s-tools.sh`
 Expected: 12 dòng `ok …`, cuối `all k8s tools pinned`.
 
-- [ ] **Step 8: Kiểm tool cũ không đổi hành vi**
+- [x] **Step 8: Kiểm tool cũ không đổi hành vi**
 
 Run: `make lint-proto && make gen && git diff --exit-code -- pkg/gen services/public-api/api/openapi services/admin-api/api/openapi`
 Expected: exit 0 (MVS có thể nâng dep chung trong `tools/go.mod`, code sinh ra không đổi).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add tools/go.mod tools/go.sum tools/k8s-tools.lock scripts/install-k8s-tools.sh scripts/check-k8s-tools.sh Makefile
