@@ -1,0 +1,60 @@
+suite: kind app-of-apps
+templates:
+  - templates/addons.yaml
+  - templates/apps.yaml
+set:
+  repoURL: https://github.com/acme/banking-go.git
+  ghOwner: acme
+tests:
+  - it: renders one Application per deployable, releases file as the last values file
+    template: templates/apps.yaml
+    documentSelector: {path: metadata.name, value: public-api}
+    asserts:
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "0"}
+      - equal: {path: spec.destination.namespace, value: banking}
+      - equal: {path: "spec.sources[0].path", value: deploy/helm/public-api}
+      - equal: {path: "spec.sources[0].helm.valueFiles", value: [values-kind.yaml, $values/deploy/releases/kind.yaml]}
+      - contains: {path: "spec.sources[0].helm.parameters", content: {name: global.ghOwner, value: acme}}
+      - notContains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
+      - equal: {path: "spec.sources[1]", value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, ref: values}}
+      - equal: {path: spec.syncPolicy.automated, value: {prune: true, selfHeal: true}}
+  - it: core-worker syncs after core (wave 1) so it never runs ahead of core's PreSync migration (review S1 F3)
+    template: templates/apps.yaml
+    documentSelector: {path: metadata.name, value: core-worker}
+    asserts:
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "1"}
+  - it: renders the 10 deployables
+    template: templates/apps.yaml
+    asserts:
+      - hasDocuments: {count: 10}
+  - it: installs chart add-ons from their Helm repo with values from Git, in their sync wave
+    template: templates/addons.yaml
+    documentSelector: {path: metadata.name, value: cert-manager}
+    asserts:
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "-20"}
+      - equal:
+          path: spec.sources[0]
+          value:
+            repoURL: https://charts.jetstack.io
+            chart: cert-manager
+            targetRevision: v1.21.2
+            helm: {releaseName: cert-manager, valueFiles: [$values/deploy/platform/cert-manager/values-kind.yaml]}
+  - it: applies directory add-ons recursively from Git with server-side apply
+    template: templates/addons.yaml
+    documentSelector: {path: metadata.name, value: gateway-api-crds}
+    asserts:
+      - equal:
+          path: spec.source
+          value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, path: deploy/platform/gateway-api, directory: {recurse: true}}
+      - contains: {path: spec.syncPolicy.syncOptions, content: ServerSideApply=true}
+  - it: Argo CD manages itself before the other add-ons
+    template: templates/addons.yaml
+    documentSelector: {path: metadata.name, value: argocd}
+    asserts:
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "-25"}
+  - it: requires repoURL
+    template: templates/apps.yaml
+    set:
+      repoURL: ""
+    asserts:
+      - failedTemplate: {errorPattern: "repoURL is required"}

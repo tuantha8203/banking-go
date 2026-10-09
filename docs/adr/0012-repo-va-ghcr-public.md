@@ -1,7 +1,7 @@
 # 0012. Repo GitHub và package GHCR công khai (public)
 
 - Trạng thái: Accepted (2026-10-09)
-- Liên quan: D-19, D-22, D-31, D-37, D-38 (`deployment.md`), ADR 0011, feature `platform` v1 (S3)
+- Liên quan: D-19, D-22, D-31, D-44, D-45 (`deployment.md`), ADR 0011, feature `platform` v1 (S3)
 
 ## Bối cảnh
 Tài khoản GitHub của owner là gói Free. Foundation dựa vào ruleset `main` (PR + CI xanh, bot `bg-release-bot` bypass chỉ
@@ -18,7 +18,7 @@ portfolio, không có khách hàng thật.
 ## Quyết định
 Repo `<GH_OWNER>/banking-go` và 6 package GHCR `banking-go/*` để public. Bỏ pull secret GHCR ở mọi môi trường; tính toàn vẹn
 image dựa vào digest pin trong `deploy/releases/<env>.yaml` + chữ ký cosign keyless (D-19). Workflow không dùng
-`pull_request_target`; PR từ fork không nhận secret/`id-token`; job release chỉ chạy trên `main`/`workflow_dispatch` (D-38).
+`pull_request_target`; PR từ fork không nhận secret/`id-token`; job release chỉ chạy trên `main`/`workflow_dispatch` (D-45).
 
 ## Hệ quả
 - Mã nguồn và image công khai; Git chỉ chứa ciphertext Sealed Secrets (giải mã cần controller key do owner giữ, D-32).

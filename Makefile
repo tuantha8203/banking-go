@@ -184,8 +184,12 @@ helm-lint: helm-deps ## helm lint --strict + kubeconform (k8s 1.36 + CRD catalog
 		$(HELM) template $$n $$c -n banking -f $$c/values-kind.yaml --set global.ghOwner=lint-owner --set image.tag=lint \
 			| $(KUBECONFORM) $(KUBECONFORM_FLAGS) || exit 1; \
 	done
+	@echo "== deploy/argocd/kind (app-of-apps)"
+	$(HELM) lint --strict deploy/argocd/kind --set repoURL=https://github.com/lint-owner/banking-go.git --set ghOwner=lint-owner
+	$(HELM) template bg-kind-root deploy/argocd/kind -n argocd --set repoURL=https://github.com/lint-owner/banking-go.git --set ghOwner=lint-owner \
+		| $(KUBECONFORM) $(KUBECONFORM_FLAGS)
 helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with tests/
-	@for c in deploy/helm/_libtest $(HELM_CHARTS); do \
+	@for c in deploy/helm/_libtest deploy/argocd/kind $(HELM_CHARTS); do \
 		if [ -d $$c/tests ]; then echo "== $$c"; $(HELM) unittest $$c || exit 1; fi; \
 	done
 
@@ -203,8 +207,8 @@ KIND_CLUSTER := banking-go
 GH_OWNER ?=
 
 .PHONY: kind-up kind-down
-kind-up: tools-k8s ## Create/refresh the kind cluster (idempotent): k8s 1.36, restore Sealed Secrets key, Argo CD
-	deploy/kind/bootstrap.sh
+kind-up: tools-k8s ## Create/refresh kind (idempotent): k8s 1.36, Sealed Secrets key, Argo CD; GH_OWNER=<owner> → full GitOps
+	GH_OWNER=$(GH_OWNER) deploy/kind/bootstrap.sh
 	deploy/kind/check-cluster.sh
 kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster (aborts if the backup fails)
 	clusters=$$($(KIND) get clusters 2>&1) || { echo "kind get clusters failed: $$clusters" >&2; exit 1; }; \

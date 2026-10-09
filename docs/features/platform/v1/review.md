@@ -89,9 +89,15 @@ Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · main
 - Rủi ro S3: xác nhận kind node pull được `ghcr.io` qua proxy (containerd của node) trước T19/T21.
 
 ## Quyết định của owner — 2026-10-09 (trước S3)
-- GitHub gói Free → **A1**: repo public + package GHCR public (foundation v4, ADR 0012: D-31 sửa, thêm D-37/D-38). Spec/plan T19,
+- GitHub gói Free → **A1**: repo public + package GHCR public (foundation v4, ADR 0012: D-31 sửa, thêm D-44/D-45 — v4 ghi nhầm D-37/D-38, đã sửa ở foundation v6). Spec/plan T19,
   T21 bỏ PAT `read:packages`, `GHCR_USER/GHCR_PAT`, Sealed `ghcr-pull` và parameter `imagePullSecrets` của app-of-apps
   (test đổi sang `notContains`). Bảng nghiệm thu T21 dòng 5 dùng thông điệp mới của smoke §7 (sau sửa T16).
 - gitleaks toàn lịch sử trước khi public: 1 finding (ví dụ `curl -u` với mật khẩu compose local trong skill docker-patterns),
   owner chấp nhận → `.gitleaksignore` theo fingerprint, ví dụ đổi sang env var; quét lại sạch (61 commit).
 - /improve sau retro S2: 4a, 3a, 5a đã áp dụng (01cd1f6); 7a chờ owner chạy `/foundation update observability`.
+
+## Quyết định của owner — 2026-10-09 (T21)
+- Mạng công ty chặn SSH tới GitHub (`github.com:22`, `ssh.github.com:443` timeout) → Argo CD kéo repo public qua HTTPS, không
+  deploy key (foundation v6, D-46, ADR 0014). kind: repo-server qua proxy của máy bằng ConfigMap `argocd-repo-server-proxy`
+  do bootstrap tạo (không commit tên proxy). Spec/plan T21 sửa theo; thêm dòng nghiệm thu 1b (đối chứng âm egress).
+- Foundation v6 sửa luôn lỗi của v4: số quyết định D-37/D-38 bị trùng → D-44/D-45.

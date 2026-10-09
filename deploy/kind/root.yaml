@@ -1,0 +1,25 @@
+# Root Application of the kind env (app-of-apps). deploy/kind/bootstrap.sh replaces ${GH_OWNER} and applies it.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bg-kind-root
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  source:
+    repoURL: https://github.com/${GH_OWNER}/banking-go.git
+    targetRevision: main
+    path: deploy/argocd/kind
+    helm:
+      parameters:
+        - name: repoURL
+          value: https://github.com/${GH_OWNER}/banking-go.git
+        - name: ghOwner
+          value: ${GH_OWNER}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

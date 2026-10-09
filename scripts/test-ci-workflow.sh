@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Contract test for .github/workflows/ci.yml (platform v1 T18; deployment.md § Pipeline, D-38): the PR gate builds every
+# Contract test for .github/workflows/ci.yml (platform v1 T18; deployment.md § Pipeline, D-45): the PR gate builds every
 # image without pushing, lints/tests deploy + observability as code, lints the workflows — and actionlint really
 # rejects a broken workflow (negative control), so a green `make actionlint` means something.
 set -euo pipefail
@@ -28,9 +28,9 @@ if actionlint "$TMP/bad.yml" >"$TMP/neg.out" 2>&1; then fail "actionlint accepte
 grep -q 'does-not-exist' "$TMP/neg.out" || fail "actionlint failed for another reason: $(head -3 "$TMP/neg.out")"
 ok "actionlint rejects a broken workflow (negative control)"
 
-# 3. triggers and permissions (D-38: no pull_request_target)
+# 3. triggers and permissions (D-45: no pull_request_target)
 [[ $(yq '(.on | has("pull_request")) and (.on | has("workflow_call"))' "$CI") == true ]] || fail "$CI must run on pull_request and workflow_call"
-if grep -l 'pull_request_target' .github/workflows/*.yml; then fail "pull_request_target is forbidden (D-38)"; fi
+if grep -l 'pull_request_target' .github/workflows/*.yml; then fail "pull_request_target is forbidden (D-45)"; fi
 [[ $(yq '.permissions.contents' "$CI") == read ]] || fail "$CI top-level permissions must be contents: read"
 ok "triggers pull_request + workflow_call, no pull_request_target, contents: read"
 

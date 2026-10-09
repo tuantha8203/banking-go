@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Contract test for .github/workflows/rollback.yml (platform v1 T20; deployment.md § Rollback → App, D-22, D-38):
+# Contract test for .github/workflows/rollback.yml (platform v1 T20; deployment.md § Rollback → App, D-22, D-45):
 # owner-dispatched only, env kind only, same concurrency as main.yml, bg-release-bot token, guard before revert,
 # workflow inputs never interpolated into shell (script injection).
 set -euo pipefail

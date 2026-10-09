@@ -17,6 +17,11 @@ addons:
     wave: -30
     namespace: monitoring
     chart: {repo: https://prometheus-community.github.io/helm-charts, name: prometheus-operator-crds, version: 32.0.1}
+  - name: argocd
+    wave: -25
+    namespace: argocd
+    chart: {repo: https://argoproj.github.io/argo-helm, name: argo-cd, version: 10.9.6}
+    values: [deploy/platform/argocd/values-kind.yaml]
   - name: cert-manager
     wave: -20
     namespace: cert-manager
@@ -93,3 +98,5 @@ addons:
   - name: observability-as-code
     wave: -9
     path: deploy/platform/observability/kind
+# Wave 0 (core-worker wave 1, after core): one Application per deployable (AD-1); must match deploy/deployables.tsv.
+apps: [core, core-worker, public-api, admin-api, mock-napas, mock-ekyc, mock-otp, mock-gateway, web-customer, web-admin]

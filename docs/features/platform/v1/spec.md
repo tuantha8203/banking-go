@@ -87,7 +87,7 @@ observability.md cho env `kind`.
 - **Feature flag**: không.
 - **Rollback**: `rollback.yml env=kind`; hỏng cluster → `make kind-down && make kind-up` (khôi phục key Sealed Secrets).
 - **Việc owner tự làm**: tạo repo GitHub **public** + push `main` (foundation v4, ADR 0012: gói Free; package GHCR public, không pull secret); GitHub App `bg-release-bot` (contents:write) + ruleset cho bot
-  bypass `deploy/releases/*`; deploy key chỉ đọc cho Argo CD; Telegram bot + chat id.
+  bypass `deploy/releases/*`; Telegram bot + chat id (Argo CD kéo repo public qua HTTPS, không deploy key — foundation v6, ADR 0014).
 
 ## Rủi ro
 - RAM máy dev (~6–7 GB cho kind) → request thấp, 1 replica; quá tải thì tắt Jaeger/Grafana bằng values.

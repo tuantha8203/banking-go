@@ -1,0 +1,52 @@
+{{- $repo := required "repoURL is required" .Values.repoURL }}
+{{- range .Values.addons }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .name }}
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .wave | quote }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .namespace | default "default" }}
+  {{- if .chart }}
+  sources:
+    - repoURL: {{ .chart.repo }}
+      chart: {{ .chart.name }}
+      targetRevision: {{ .chart.version }}
+      helm:
+        releaseName: {{ .releaseName | default .name }}
+        {{- with .values }}
+        valueFiles:
+          {{- range . }}
+          - $values/{{ . }}
+          {{- end }}
+        {{- end }}
+    - repoURL: {{ $repo }}
+      targetRevision: {{ $.Values.targetRevision }}
+      ref: values
+  {{- else }}
+  source:
+    repoURL: {{ $repo }}
+    targetRevision: {{ $.Values.targetRevision }}
+    path: {{ .path }}
+    directory:
+      recurse: true
+  {{- end }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff: {duration: 10s, factor: 2, maxDuration: 3m}
+{{- end }}

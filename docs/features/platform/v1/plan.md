@@ -6352,17 +6352,17 @@ git commit -m "ci(platform): rollback.yml reverts a kind digest bump through bg-
 
 **Owner trước:**
 1. T19 đã có ít nhất một lần `main.yml` xanh → `deploy/releases/kind.yaml` tồn tại trên `main`.
-2. Tạo deploy key **chỉ đọc**: `ssh-keygen -t ed25519 -N '' -C argocd-kind -f ~/.config/banking-go/argocd-deploy-key && chmod 600 ~/.config/banking-go/argocd-deploy-key`; thêm `argocd-deploy-key.pub` vào repo (Settings → Deploy keys, không tick write).
+2. (Bỏ theo foundation v6 / ADR 0014: mạng công ty chặn SSH tới GitHub; repo public → Argo CD kéo qua HTTPS, không credential. Máy sau proxy: `make kind-up` dùng `HTTPS_PROXY` của máy, hoặc `ARGOCD_PROXY_URL=...`.)
 3. (Bỏ theo foundation v4 / ADR 0012: package GHCR public, không cần PAT `read:packages` hay Sealed `ghcr-pull`.)
 4. Telegram đã cấu hình (T16).
 
 **Files:**
 - Create: `deploy/argocd/kind/Chart.yaml`, `deploy/argocd/kind/templates/addons.yaml`, `deploy/argocd/kind/templates/apps.yaml`, `deploy/argocd/kind/tests/app-of-apps_test.yaml`, `deploy/kind/root.yaml`, `deploy/kind/wait-argocd.sh`
-- Modify: `deploy/argocd/kind/values.yaml` (addon `argocd` wave -25, danh sách `apps`), `deploy/kind/bootstrap.sh`, `deploy/platform/argocd/values-kind.yaml` (health của Application), `Makefile` (`kind-up` truyền `GH_OWNER`, `helm-lint`/`helm-test` gồm chart app-of-apps), `CLAUDE.md` (Gotchas)
+- Modify: `deploy/argocd/kind/values.yaml` (addon `argocd` wave -25, danh sách `apps`), `deploy/kind/bootstrap.sh`, `deploy/platform/argocd/values-kind.yaml` (health của Application, `repoServer.envFrom` ConfigMap proxy `optional: true`), `Makefile` (`kind-up` truyền `GH_OWNER`, `helm-lint`/`helm-test` gồm chart app-of-apps), `CLAUDE.md` (Gotchas)
 
 **Interfaces:**
 - Consumes: catalog `addons[]` (T9–T14), chart `deploy/helm/<d>` (T7), `deploy/releases/kind.yaml` (T19), `sealed-key.sh` (T8), smoke/watch (T12–T17), rollback (T20).
-- Produces: Application `bg-kind-root` (ns `argocd`, path `deploy/argocd/kind`, Helm parameter `repoURL`, `ghOwner`), một Application cho mỗi addon (annotation `argocd.argoproj.io/sync-wave` = `wave`) và mỗi app (wave `0`; riêng `core-worker` wave `1` để chỉ rollout sau khi `core` Healthy — migration PreSync của core xong; core migrate fail thì core-worker giữ bản cũ (review S1 F3); multi-source: `deploy/helm/<d>` + `values-kind.yaml` + `$values/deploy/releases/kind.yaml`, parameter `global.ghOwner`; không có `imagePullSecrets` — GHCR public); Secret repo `argocd/repo-banking-go` (từ deploy key, tạo bởi bootstrap); `deploy/kind/wait-argocd.sh` (env `WAIT_TIMEOUT`, mặc định 1800 s); `make kind-up GH_OWNER=<owner>` = GitOps đầy đủ; không có `GH_OWNER` → chỉ cluster + Argo CD (đường offline `kind-platform`/`kind-apps` giữ nguyên cho máy chưa có GitHub).
+- Produces: Application `bg-kind-root` (ns `argocd`, path `deploy/argocd/kind`, Helm parameter `repoURL`, `ghOwner`), một Application cho mỗi addon (annotation `argocd.argoproj.io/sync-wave` = `wave`) và mỗi app (wave `0`; riêng `core-worker` wave `1` để chỉ rollout sau khi `core` Healthy — migration PreSync của core xong; core migrate fail thì core-worker giữ bản cũ (review S1 F3); multi-source: `deploy/helm/<d>` + `values-kind.yaml` + `$values/deploy/releases/kind.yaml`, parameter `global.ghOwner`; không có `imagePullSecrets` — GHCR public); ConfigMap `argocd/argocd-repo-server-proxy` (HTTPS_PROXY/HTTP_PROXY/NO_PROXY từ env máy, tạo bởi bootstrap, không vào Git; repoURL `https://github.com/<owner>/banking-go.git`, không repo Secret); `deploy/kind/wait-argocd.sh` (env `WAIT_TIMEOUT`, mặc định 1800 s); `make kind-up GH_OWNER=<owner>` = GitOps đầy đủ; không có `GH_OWNER` → chỉ cluster + Argo CD (đường offline `kind-platform`/`kind-apps` giữ nguyên cho máy chưa có GitHub).
 
 - [ ] **Step 1: Viết test thất bại**
 
@@ -6373,7 +6373,7 @@ templates:
   - templates/addons.yaml
   - templates/apps.yaml
 set:
-  repoURL: git@github.com:acme/banking-go.git
+  repoURL: https://github.com/acme/banking-go.git
   ghOwner: acme
 tests:
   - it: renders one Application per deployable, releases file as the last values file
@@ -6386,7 +6386,7 @@ tests:
       - equal: {path: spec.sources[0].helm.valueFiles, value: [values-kind.yaml, $values/deploy/releases/kind.yaml]}
       - contains: {path: spec.sources[0].helm.parameters, content: {name: global.ghOwner, value: acme}}
       - notContains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
-      - equal: {path: spec.sources[1], value: {repoURL: "git@github.com:acme/banking-go.git", targetRevision: main, ref: values}}
+      - equal: {path: spec.sources[1], value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, ref: values}}
       - equal: {path: spec.syncPolicy.automated, value: {prune: true, selfHeal: true}}
   - it: core-worker syncs after core (wave 1) so it never runs ahead of core's PreSync migration (review S1 F3)
     template: templates/apps.yaml
@@ -6415,7 +6415,7 @@ tests:
     asserts:
       - equal:
           path: spec.source
-          value: {repoURL: "git@github.com:acme/banking-go.git", targetRevision: main, path: deploy/platform/gateway-api, directory: {recurse: true}}
+          value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, path: deploy/platform/gateway-api, directory: {recurse: true}}
       - contains: {path: spec.syncPolicy.syncOptions, content: ServerSideApply=true}
   - it: Argo CD manages itself before the other add-ons
     template: templates/addons.yaml
@@ -6433,8 +6433,8 @@ tests:
 `Makefile` — trong `helm-test`, đổi danh sách vòng lặp thành `deploy/helm/_libtest deploy/argocd/kind $(HELM_CHARTS)`; trong `helm-lint`, thêm cuối recipe:
 ```make
 	@echo "== deploy/argocd/kind (app-of-apps)"
-	$(HELM) lint --strict deploy/argocd/kind --set repoURL=git@github.com:lint-owner/banking-go.git --set ghOwner=lint-owner
-	$(HELM) template bg-kind-root deploy/argocd/kind -n argocd --set repoURL=git@github.com:lint-owner/banking-go.git --set ghOwner=lint-owner \
+	$(HELM) lint --strict deploy/argocd/kind --set repoURL=https://github.com/lint-owner/banking-go.git --set ghOwner=lint-owner
+	$(HELM) template bg-kind-root deploy/argocd/kind -n argocd --set repoURL=https://github.com/lint-owner/banking-go.git --set ghOwner=lint-owner \
 		| $(KUBECONFORM) $(KUBECONFORM_FLAGS)
 ```
 
@@ -6584,6 +6584,13 @@ apps: [core, core-worker, public-api, admin-api, mock-napas, mock-ekyc, mock-otp
       end
       return hs
 ```
+và trong khối `repoServer:` thêm (ADR 0014; ConfigMap do bootstrap tạo, không có thì repo-server kết nối trực tiếp):
+```yaml
+  envFrom:
+    - configMapRef:
+        name: argocd-repo-server-proxy
+        optional: true
+```
 
 Run: `make helm-lint helm-test`
 Expected: app-of-apps lint `1 chart(s) linted, 0 chart(s) failed`, kubeconform `Invalid: 0`; suite `kind app-of-apps` 6 test pass.
@@ -6604,13 +6611,13 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argocd
   source:
-    repoURL: git@github.com:${GH_OWNER}/banking-go.git
+    repoURL: https://github.com/${GH_OWNER}/banking-go.git
     targetRevision: main
     path: deploy/argocd/kind
     helm:
       parameters:
         - name: repoURL
-          value: git@github.com:${GH_OWNER}/banking-go.git
+          value: https://github.com/${GH_OWNER}/banking-go.git
         - name: ghOwner
           value: ${GH_OWNER}
   syncPolicy:
@@ -6651,7 +6658,8 @@ done
 #   1. create kind cluster banking-go (k8s 1.36.4, 1 CP + 2 workers, host 80/443) if missing
 #   2. restore the Sealed Secrets controller key from ~/.config/banking-go (before any controller starts)
 #   3. install/upgrade Argo CD (chart pinned; afterwards Argo CD manages itself, wave -25)
-#   4. with GH_OWNER: repo credentials from the read-only deploy key, root app-of-apps, wait Synced/Healthy, back up the key
+#   4. with GH_OWNER: repo-server proxy ConfigMap (dev machine behind a proxy), root app-of-apps over HTTPS (public repo, no
+#      credentials — ADR 0014), wait Synced/Healthy, back up the Sealed Secrets key
 #      without GH_OWNER: stop after Argo CD (offline path: make kind-platform kind-apps)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -6683,15 +6691,23 @@ if [[ -z ${GH_OWNER:-} ]]; then
 fi
 owner=${GH_OWNER,,}
 [[ $owner =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] || die "GH_OWNER '$GH_OWNER' is not a GitHub login"
-key="$CONFIG_DIR/argocd-deploy-key"
-[[ -s $key ]] || die "missing read-only deploy key $key (owner step of T21)"
-repo="git@github.com:$owner/banking-go.git"
+repo="https://github.com/$owner/banking-go.git"
 
-log "repository credentials for $repo (bootstrap secret, never committed)"
-kubectl -n argocd create secret generic repo-banking-go \
-  --from-literal=type=git --from-literal=url="$repo" --from-file=sshPrivateKey="$key" --dry-run=client -o yaml \
-  | kubectl label --local -f - argocd.argoproj.io/secret-type=repository -o yaml \
-  | kubectl apply -f - >/dev/null
+# repo-server egress (ADR 0014): the company network blocks SSH to GitHub and kind pods have no proxy. The proxy comes from
+# this machine (ARGOCD_PROXY_URL, else HTTPS_PROXY; ARGOCD_PROXY_URL= → direct) and never goes into Git.
+proxy=${ARGOCD_PROXY_URL-${HTTPS_PROXY:-${https_proxy:-}}}
+if [[ -n $proxy ]]; then
+  kind_net=$(docker network inspect kind -f '{{range .IPAM.Config}}{{.Subnet}},{{end}}' 2>/dev/null || true)
+  no_proxy="${NO_PROXY:-${no_proxy:-}},localhost,127.0.0.1,10.96.0.0/16,10.244.0.0/16,${kind_net%,},.svc,.cluster.local,kind.localhost"
+  kubectl -n argocd create configmap argocd-repo-server-proxy --from-literal=HTTPS_PROXY="$proxy" --from-literal=HTTP_PROXY="$proxy" \
+    --from-literal=NO_PROXY="${no_proxy#,}" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  log "argocd-repo-server egress via proxy (ConfigMap argocd-repo-server-proxy, not in Git)"
+else
+  kubectl -n argocd delete configmap argocd-repo-server-proxy --ignore-not-found >/dev/null
+  log "argocd-repo-server egress: direct (no proxy)"
+fi
+kubectl -n argocd rollout restart deploy/argocd-repo-server >/dev/null
+kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=180s >/dev/null
 
 log "applying root app-of-apps bg-kind-root"
 sed "s|\${GH_OWNER}|$owner|g" "$ROOT/deploy/kind/root.yaml" | kubectl apply -f - >/dev/null
@@ -6709,7 +6725,7 @@ kind-up: tools-k8s ## Create/refresh kind (idempotent): k8s 1.36, Sealed Secrets
 
 - [ ] **Step 5: Gotchas** (A1, foundation v4: GHCR public → không có pull secret `ghcr-pull`) — `CLAUDE.md` — thêm vào `## Gotchas`:
 ```markdown
-- kind GitOps: `make kind-up GH_OWNER=<owner>` cần deploy key chỉ đọc ở ~/.config/banking-go/argocd-deploy-key; `deploy/releases/kind.yaml` chỉ bot `bg-release-bot` ghi; rollback chỉ owner chạy `gh workflow run rollback.yml`.
+- kind GitOps: `make kind-up GH_OWNER=<owner>` — Argo CD kéo repo public qua HTTPS (mạng công ty chặn SSH tới GitHub), repo-server đi qua proxy của máy bằng ConfigMap `argocd-repo-server-proxy` do bootstrap tạo (`ARGOCD_PROXY_URL=` để kết nối trực tiếp); `deploy/releases/kind.yaml` chỉ bot `bg-release-bot` ghi; rollback chỉ owner chạy `gh workflow run rollback.yml`.
 ```
 
 Run: `chmod +x deploy/kind/wait-argocd.sh && make helm-lint helm-test && make actionlint`
@@ -6731,6 +6747,7 @@ git commit -m "feat(platform): argo cd app-of-apps for kind with multi-source re
 | 3 | `deploy/kind/wait-argocd.sh && make kind-smoke` | Job `*-migrate` `Completed`; 4 host 200 (`{"status":"ok"}` / HTML); 10 dòng `<deployable> runs sha256:…` khớp `deploy/releases/kind.yaml` |
 | 4 | `prev=$(git log -2 --format=%H -- deploy/releases/kind.yaml \| tail -1)`; owner: `bin/gh workflow run rollback.yml -f env=kind -f revert_sha=$(git log -1 --format=%H -- deploy/releases/kind.yaml)`; sau khi run xanh: `git pull && deploy/kind/wait-argocd.sh && make kind-smoke && git diff --quiet $prev HEAD -- deploy/releases/kind.yaml` | rollback run xanh; kind-smoke pass với digest = bản trước; `git diff` không khác |
 | 5 | `make kind-smoke` (mục 5–7) và `make runbooks-test` | trace `public-api` trong Jaeger `/api/v3/traces`; RED rate > 0; dashboard `bg-service-overview` có trong Grafana; `Alertmanager delivered N telegram request(s) successfully`; 7 runbook `ok` |
+| 1b | Đối chứng âm egress: `ARGOCD_PROXY_URL= make kind-up GH_OWNER=<owner>` (máy sau proxy) rồi `bin/kubectl -n argocd get application bg-kind-root -o jsonpath='{.status.conditions[*].message}'` | lỗi kéo repo (timeout/dial tcp); sau đó `make kind-up GH_OWNER=<owner>` (có proxy) → `ok   N Argo CD applications Synced/Healthy` |
 | 6 | `make helm-lint helm-test && make alerts-test && make actionlint && scripts/check-no-plain-secrets.sh && docker run --rm -v "$PWD:/repo" -w /repo -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' zricethezav/gitleaks:v8.30.0 git /repo --redact --exit-code 1` | tất cả exit 0; gitleaks `no leaks found`; `ok   no plaintext Secret under deploy/` |
 
 Ghi kết quả từng dòng (lệnh + output rút gọn) làm evidence của T21 trong `tasks.json`.

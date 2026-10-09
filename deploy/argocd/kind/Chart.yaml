@@ -1,0 +1,5 @@
+apiVersion: v2
+name: bg-kind
+description: App-of-apps of the kind env (ADR 0011). Values = the add-on/app catalog in values.yaml.
+type: application
+version: 0.1.0
