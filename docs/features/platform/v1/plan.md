@@ -84,7 +84,7 @@ Sprint S2 — "Observability as code trên kind"
 - [x] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
 - [x] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
 - [x] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
-- [ ] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
+- [x] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
 - [x] T17: Runbook + `make kind-watch`
 
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
@@ -5313,7 +5313,7 @@ git commit -m "feat(platform): service-overview and platform grafana dashboards 
 - Consumes: `seal()` + `ENV_FILE` của `seal-kind.sh` (T10), namespace `monitoring` (T13), alert labels `severity`/`alertname` (T14), `prom` (T13), `bin/amtool` (T1).
 - Produces: template `observability/alertmanager/kind.yaml` (placeholder `${TELEGRAM_BOT_TOKEN}`, `${TELEGRAM_CHAT_ID}`), receiver `telegram` (route `alertname="Watchdog"` repeat 12h và `severity="critical"` repeat 1h), receiver `"null"` cho phần còn lại; Secret `monitoring/alertmanager-kind-config` (key `alertmanager.yaml`) dùng bởi `alertmanager.alertmanagerSpec.configSecret`; `scripts/render-alertmanager.sh [template]`; target `make alertmanager-test`.
 
-- [ ] **Step 1: Viết test thất bại** — `scripts/test-alertmanager.sh`
+- [x] **Step 1: Viết test thất bại** — `scripts/test-alertmanager.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -5344,7 +5344,7 @@ alertmanager-test: tools-k8s ## amtool check + routing test of observability/ale
 Run: `chmod +x scripts/test-alertmanager.sh && make alertmanager-test`
 Expected: FAIL — `scripts/render-alertmanager.sh: No such file or directory`.
 
-- [ ] **Step 2: Template + renderer**
+- [x] **Step 2: Template + renderer**
 
 `observability/alertmanager/kind.yaml`:
 ```yaml
@@ -5397,7 +5397,7 @@ sed -e "s|\${TELEGRAM_BOT_TOKEN}|$TELEGRAM_BOT_TOKEN|g" -e "s|\${TELEGRAM_CHAT_I
 Run: `chmod +x scripts/render-alertmanager.sh && make alertmanager-test`
 Expected: `ok   alertmanager kind config: valid, critical + Watchdog → telegram`.
 
-- [ ] **Step 3: Seal + wiring**
+- [x] **Step 3: Seal + wiring**
 
 `deploy/secrets/kind.env.example` — thêm:
 ```dotenv
@@ -5437,12 +5437,12 @@ awk -v s="$sent" -v f="$failed" 'BEGIN{exit !(s > 0 && f == 0)}' || fail "telegr
 ok "Alertmanager delivered $sent telegram notification(s), 0 failed"
 ```
 
-- [ ] **Step 4: Chạy trên kind**
+- [x] **Step 4: Chạy trên kind**
 
 Run: `make seal && make kind-platform && make kind-smoke`
 Expected: `sealed monitoring/alertmanager-kind-config`; kind-smoke thêm `ok   Alertmanager delivered N telegram notification(s), 0 failed`; tin `Watchdog` xuất hiện trong Telegram của owner.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add observability/alertmanager scripts/render-alertmanager.sh scripts/test-alertmanager.sh scripts/seal-kind.sh deploy/secrets/kind.env.example \

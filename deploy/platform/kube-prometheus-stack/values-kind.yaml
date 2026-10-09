@@ -24,6 +24,8 @@ prometheus:
       limits: {memory: 1Gi}
 alertmanager:
   alertmanagerSpec:
+    # Whole config from the Sealed Secret (contains the Telegram token); template: observability/alertmanager/kind.yaml
+    configSecret: alertmanager-kind-config
     replicas: 1
     resources:
       requests: {cpu: 10m, memory: 32Mi}

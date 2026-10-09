@@ -185,9 +185,8 @@
         "T14",
         "T10"
       ],
-      "status": "blocked",
-      "evidence": "",
-      "note": "Chờ owner: thêm TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID vào deploy/secrets/kind.env (bot @BotFather + chat id; không dán token vào chat). `make seal` hiện in skip monitoring/alertmanager-kind-config. Đã xong (commit part 1): template observability/alertmanager/kind.yaml, scripts/render-alertmanager.sh, wiring seal-kind.sh; make alertmanager-test ok. Còn lại sau khi có env: make seal (tạo deploy/secrets/kind/monitoring-alertmanager-kind-config.sealed.yaml) → thêm configSecret: alertmanager-kind-config vào kube-prometheus-stack values-kind.yaml (plan Step 3; chưa thêm vì thiếu Secret sẽ làm Alertmanager hỏng) → kind-platform → kind-smoke §7. Owner kiểm deploy/secrets/kind.env.example đã có dòng TELEGRAM_* chưa (AI không được đọc deploy/secrets/; file đã chứa chữ TELEGRAM nên AI không sửa)."
+      "status": "done",
+      "evidence": "RED (c897138): make alertmanager-test → \"scripts/render-alertmanager.sh: No such file or directory\"; kind-smoke → \"FAIL: telegram notifications sent=0 failed=0\". Part 1 (6cc18d0): template + renderer + seal wiring, make alertmanager-test → \"ok   alertmanager kind config: valid, critical + Watchdog → telegram\". Bị chặn 2 lần chờ owner (TELEGRAM_* chưa có trong kind.env; rồi thiếu '=' ở dòng 17). GREEN: make seal → \"sealed monitoring/alertmanager-kind-config\", \"ok   no plaintext Secret under deploy/\" (17 file sealed khác chỉ đổi ciphertext → khôi phục bản đã commit); configSecret: alertmanager-kind-config trong kube-prometheus-stack values; scripts/kind-platform.sh kind-secrets kube-prometheus-stack exit 0; Alertmanager /api/v2/receivers = [null, telegram]; make kind-smoke → \"ok   Alertmanager delivered 1 telegram notification(s), 0 failed\", all checks passed; check-platform exit 0; make lint/test exit 0. kind.env.example: AI không được đọc deploy/secrets/ — owner xác nhận có dòng TELEGRAM_*."
     },
     {
       "id": "T17",
