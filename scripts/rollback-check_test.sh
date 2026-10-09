@@ -18,6 +18,6 @@ if check "$B" prod; then fail "env prod accepted in platform v1"; fi
 if check deadbeef kind; then fail "unknown sha accepted"; fi
 if check 'B;rm' kind; then fail "non-hex sha accepted"; fi
 # a digest-only commit that is not on main (side branch) must be rejected
-g checkout -q -b side "$A"; echo "digest: 9" > "$repo/deploy/releases/kind.yaml"; g add -A; g commit -qm "chore(release): kind 9"; S=$(g rev-parse HEAD); g checkout -q main
+g checkout -q -b side "$B"; echo "digest: 9" > "$repo/deploy/releases/kind.yaml"; g add -A; g commit -qm "chore(release): kind 9"; S=$(g rev-parse HEAD); g checkout -q main
 if check "$S" kind; then fail "commit not on main accepted"; fi
 echo "ok   rollback-check"

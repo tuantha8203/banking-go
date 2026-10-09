@@ -90,7 +90,7 @@ Sprint S2 — "Observability as code trên kind"
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
 - [x] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
 - [x] T19: `main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`
-- [ ] T20: `rollback.yml` (env=kind, revert_sha)
+- [x] T20: `rollback.yml` (env=kind, revert_sha)
 - [ ] T21: Argo CD app-of-apps `deploy/argocd/kind/` + bootstrap GitOps + nghiệm thu tiêu chí 1–6
 
 ---
@@ -6216,7 +6216,7 @@ Expected: `verify ok <img>` và `attestation ok <img>` cho 6 image.
 - Consumes: App token + `deploy/releases/kind.yaml` do bot ghi (T19), `concurrency` group `release-kind` (T19), `make scripts-test` (T19).
 - Produces: `workflow_dispatch` input `env` (choice: `kind`), `revert_sha` (string); `scripts/rollback-check.sh <sha> <env>` (commit phải nằm trên `main` và chỉ đổi `deploy/releases/<env>.yaml`); commit bot `Revert "chore(release): kind <sha7>"`.
 
-- [ ] **Step 1: Viết test thất bại** — `scripts/rollback-check_test.sh`
+- [x] **Step 1: Viết test thất bại** — `scripts/rollback-check_test.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -6244,7 +6244,7 @@ echo "ok   rollback-check"
 Run: `chmod +x scripts/rollback-check_test.sh && make scripts-test`
 Expected: `ok   release-bump`, rồi `FAIL: digest-only bump must be accepted` (script chưa có).
 
-- [ ] **Step 2: `scripts/rollback-check.sh`**
+- [x] **Step 2: `scripts/rollback-check.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -6266,7 +6266,7 @@ echo "ok: $sha only changes deploy/releases/$env.yaml"
 Run: `chmod +x scripts/rollback-check.sh && make scripts-test`
 Expected: `ok   release-bump`, `ok   rollback-check`.
 
-- [ ] **Step 3: `.github/workflows/rollback.yml`**
+- [x] **Step 3: `.github/workflows/rollback.yml`**
 
 ```yaml
 name: rollback
@@ -6332,12 +6332,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
-- [ ] **Step 4: Lint + test**
+- [x] **Step 4: Lint + test**
 
 Run: `make actionlint && make scripts-test`
 Expected: exit 0; `ok   rollback-check`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/rollback.yml scripts/rollback-check.sh scripts/rollback-check_test.sh

@@ -228,8 +228,8 @@
       "dependencies": [
         "T19"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (917072b): make scripts-test → \"FAIL: digest-only bump must be accepted\"; test-rollback-workflow → \"rollback.yml missing\"; dry run với rollback.yml của plan → 4 ok, chèn ${{ inputs.revert_sha }} vào run → \"FAIL: inputs interpolated into run\". GREEN: make scripts-test → \"ok   release-bump\", \"ok   rollback-check\" (sửa setup ca thêm của tôi: nhánh side tạo từ B thay A vì A chưa có deploy/releases/, assertion giữ nguyên; lý do từ chối đúng \"… is not on this branch\"); scripts/test-rollback-workflow.sh all checks passed; test-ci-workflow, test-main-workflow pass; make actionlint exit 0; đối chứng trên lịch sử thật: rollback-check.sh f120c3c kind → \"ok: f120c3c only changes deploy/releases/kind.yaml\"; 023f3f0 (merge PR #2) → bị từ chối; make lint/test exit 0. Chạy thật rollback.yml (owner dispatch) ở nghiệm thu T21 tiêu chí 4 theo plan."
     },
     {
       "id": "T21",
