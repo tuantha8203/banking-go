@@ -192,6 +192,10 @@ helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with test
 actionlint: tools-k8s ## Lint .github/workflows (actionlint; uses shellcheck when installed)
 	$(ACTIONLINT)
 
+.PHONY: scripts-test
+scripts-test: tools-k8s ## Shell tests of the release/rollback helpers (scripts/*_test.sh)
+	@for t in scripts/*_test.sh; do echo "== $$t"; $$t; done
+
 # ---------------------------------------------------------------------------------------------
 # kind env (ADR 0011). Never points at another cluster: scripts check the kubectl context.
 KIND_CLUSTER := banking-go
