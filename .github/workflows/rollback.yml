@@ -1,0 +1,61 @@
+name: rollback
+
+# App rollback = git revert of a digest bump (deployment.md § Rollback → App). v1: env kind only.
+# Find the bump: git log --oneline -- deploy/releases/kind.yaml
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Environment (platform v1 — kind only)
+        type: choice
+        options: [kind]
+        required: true
+      revert_sha:
+        description: SHA of the bg-release-bot commit to revert
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.env }}   # same group as main.yml (release-kind): never races a bump
+  cancel-in-progress: false
+
+jobs:
+  revert:
+    name: revert ${{ inputs.revert_sha }} on ${{ inputs.env }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BG_RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BG_RELEASE_BOT_PRIVATE_KEY }}
+          permission-contents: write
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+      - name: Only digest bumps can be reverted directly
+        env:
+          REVERT_SHA: ${{ inputs.revert_sha }}
+          ENV_NAME: ${{ inputs.env }}
+        run: scripts/rollback-check.sh "$REVERT_SHA" "$ENV_NAME"
+      - name: Revert and push (bg-release-bot, D-22)
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+          REVERT_SHA: ${{ inputs.revert_sha }}
+          ENV_NAME: ${{ inputs.env }}
+        run: |
+          uid=$(gh api "/users/${SLUG}[bot]" --jq .id)
+          git config user.name "${SLUG}[bot]"
+          git config user.email "${uid}+${SLUG}[bot]@users.noreply.github.com"
+          git revert --no-edit "$REVERT_SHA"
+          git push origin HEAD:main
+          {
+            echo "Reverted \`$REVERT_SHA\` on \`$ENV_NAME\`: Argo CD syncs the previous digests."
+            echo "Then on the dev machine: \`make kind-smoke\` (digest check) and \`make kind-watch\`."
+          } >> "$GITHUB_STEP_SUMMARY"
