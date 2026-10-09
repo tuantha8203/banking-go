@@ -19,6 +19,10 @@ scripts/release-bump.sh kind "$sha" acme "$TMP/d" "$TMP/kind.yaml"
 [[ $(yq '."mock-otp".image' "$TMP/kind.yaml") == ghcr.io/acme/banking-go/mocks ]] || fail "mock-otp image"
 [[ $(yq '."web-admin".digest' "$TMP/kind.yaml") == "$(cat "$TMP/d/web-admin")" ]] || fail "web-admin digest"
 
+# first release: deploy/releases/ does not exist yet on main (main.yml run 37893487820 failed on mktemp)
+scripts/release-bump.sh kind "$sha" acme "$TMP/d" "$TMP/new/releases/kind.yaml" || fail "first release into a missing directory"
+[[ $(yq '.release' "$TMP/new/releases/kind.yaml") == sha-0123456 ]] || fail "first release content"
+
 echo keep > "$TMP/out.yaml"; rm "$TMP/d/web-admin"
 if scripts/release-bump.sh kind "$sha" acme "$TMP/d" "$TMP/out.yaml" 2>/dev/null; then fail "missing digest accepted"; fi
 [[ $(cat "$TMP/out.yaml") == keep ]] || fail "output overwritten on error"
