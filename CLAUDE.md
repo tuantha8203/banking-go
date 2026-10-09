@@ -78,5 +78,6 @@ Core banking tối giản chuẩn kỹ thuật production (học + portfolio, kh
 - Migration đã có trên main: không sửa, tạo file mới (hook chặn).
 - kind cần cổng 80/443 trống trên host; RAM ~6–7 GB, có stack observability (S2) thì nhiều hơn — máy 15 GiB đầy swap khi mở kèm IDE/trình duyệt: đóng bớt app trước full chain, hoặc chỉ cài addon đổi (`scripts/kind-platform.sh <addon>`). `*.kind.localhost` tự trỏ 127.0.0.1, CA: `make kind-ca`.
 - Pod trong kind KHÔNG có proxy công ty (proxy nội bộ, lấy từ HTTPS_PROXY của máy): tích hợp ra internet phải cấu hình proxy rõ (vd. Alertmanager → Telegram qua `TELEGRAM_PROXY_URL`, mặc định HTTPS_PROXY của host khi `make seal`); gặp `dial tcp … timeout` → nghi proxy trước.
+- kind GitOps: `make kind-up GH_OWNER=<owner>` — Argo CD kéo repo public qua HTTPS (mạng công ty chặn SSH tới GitHub), repo-server đi qua proxy của máy bằng ConfigMap `argocd-repo-server-proxy` do bootstrap tạo (`ARGOCD_PROXY_URL=` để kết nối trực tiếp); `deploy/releases/kind.yaml` chỉ bot `bg-release-bot` ghi; rollback chỉ owner chạy `gh workflow run rollback.yml`.
 - S1/S2 cài kind bằng helm/kubectl trực tiếp (`kind-platform`, `kind-apps`) — đường tạm chỉ cho kind, S3 chuyển sang Argo CD.
 - Script kind kiểm kubectl context một lần lúc bắt đầu: KHÔNG đổi context (`kubectl config use-context`) ở terminal khác khi `kind-platform`/`kind-apps` đang chạy.

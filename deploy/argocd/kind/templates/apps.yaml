@@ -1,0 +1,44 @@
+{{- $repo := required "repoURL is required" .Values.repoURL }}
+{{- $owner := required "ghOwner is required" .Values.ghOwner }}
+{{- range .Values.apps }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ . }}
+  namespace: argocd
+  annotations:
+    # core-worker shares core's database: wave 1 waits for the core Application (PreSync migration + rollout) to be Healthy.
+    argocd.argoproj.io/sync-wave: {{ if eq . "core-worker" }}"1"{{ else }}"0"{{ end }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: banking
+  sources:
+    - repoURL: {{ $repo }}
+      targetRevision: {{ $.Values.targetRevision }}
+      path: deploy/helm/{{ . }}
+      helm:
+        releaseName: {{ . }}
+        valueFiles:
+          - values-kind.yaml
+          - $values/deploy/releases/kind.yaml
+        parameters:
+          - name: global.ghOwner
+            value: {{ $owner }}
+    - repoURL: {{ $repo }}
+      targetRevision: {{ $.Values.targetRevision }}
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff: {duration: 10s, factor: 2, maxDuration: 3m}
+{{- end }}

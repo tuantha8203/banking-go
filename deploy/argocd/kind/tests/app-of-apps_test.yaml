@@ -12,11 +12,11 @@ tests:
     asserts:
       - equal: {path: "metadata.annotations[\"argocd.argoproj.io/sync-wave\"]", value: "0"}
       - equal: {path: spec.destination.namespace, value: banking}
-      - equal: {path: spec.sources[0].path, value: deploy/helm/public-api}
-      - equal: {path: spec.sources[0].helm.valueFiles, value: [values-kind.yaml, $values/deploy/releases/kind.yaml]}
-      - contains: {path: spec.sources[0].helm.parameters, content: {name: global.ghOwner, value: acme}}
+      - equal: {path: "spec.sources[0].path", value: deploy/helm/public-api}
+      - equal: {path: "spec.sources[0].helm.valueFiles", value: [values-kind.yaml, $values/deploy/releases/kind.yaml]}
+      - contains: {path: "spec.sources[0].helm.parameters", content: {name: global.ghOwner, value: acme}}
       - notContains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
-      - equal: {path: spec.sources[1], value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, ref: values}}
+      - equal: {path: "spec.sources[1]", value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, ref: values}}
       - equal: {path: spec.syncPolicy.automated, value: {prune: true, selfHeal: true}}
   - it: core-worker syncs after core (wave 1) so it never runs ahead of core's PreSync migration (review S1 F3)
     template: templates/apps.yaml

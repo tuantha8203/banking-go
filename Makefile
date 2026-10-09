@@ -207,8 +207,8 @@ KIND_CLUSTER := banking-go
 GH_OWNER ?=
 
 .PHONY: kind-up kind-down
-kind-up: tools-k8s ## Create/refresh the kind cluster (idempotent): k8s 1.36, restore Sealed Secrets key, Argo CD
-	deploy/kind/bootstrap.sh
+kind-up: tools-k8s ## Create/refresh kind (idempotent): k8s 1.36, Sealed Secrets key, Argo CD; GH_OWNER=<owner> → full GitOps
+	GH_OWNER=$(GH_OWNER) deploy/kind/bootstrap.sh
 	deploy/kind/check-cluster.sh
 kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster (aborts if the backup fails)
 	clusters=$$($(KIND) get clusters 2>&1) || { echo "kind get clusters failed: $$clusters" >&2; exit 1; }; \
