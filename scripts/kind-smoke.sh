@@ -82,15 +82,16 @@ for uid in bg-service-overview bg-platform; do
   ok "Grafana dashboard $uid"
 done
 
-# 7. Watchdog reaches Telegram (spec criterion 5): Alertmanager reports successful telegram notifications
+# 7. Watchdog reaches Telegram (spec criterion 5): at least one HTTP request to the Telegram API succeeded.
+#    alertmanager_notifications_failed_total only grows once retries are exhausted, so count successful requests.
 active=$(svc_get monitoring kube-prometheus-stack-alertmanager:9093 '/api/v2/alerts?filter=alertname%3D%22Watchdog%22' | jq 'length')
 [[ $active -ge 1 ]] || fail "Watchdog not active in Alertmanager"
-sent=0
+delivered=0
 for _ in $(seq 24); do
-  sent=$(prom_value 'sum(alertmanager_notifications_total{integration="telegram"})')
-  awk -v v="$sent" 'BEGIN{exit !(v > 0)}' && break; sleep 5
+  delivered=$(prom_value 'sum(alertmanager_notification_requests_total{integration="telegram"}) - sum(alertmanager_notification_requests_failed_total{integration="telegram"})')
+  awk -v v="$delivered" 'BEGIN{exit !(v > 0)}' && break; sleep 5
 done
-failed=$(prom_value 'sum(alertmanager_notifications_failed_total{integration="telegram"})')
-awk -v s="$sent" -v f="$failed" 'BEGIN{exit !(s > 0 && f == 0)}' || fail "telegram notifications sent=$sent failed=$failed"
-ok "Alertmanager delivered $sent telegram notification(s), 0 failed"
+requests=$(prom_value 'sum(alertmanager_notification_requests_total{integration="telegram"})')
+awk -v v="$delivered" 'BEGIN{exit !(v > 0)}' || fail "no successful telegram request ($requests attempted, all failed; see alertmanager logs)"
+ok "Alertmanager delivered $delivered telegram request(s) successfully"
 echo "kind-smoke: all checks passed"
