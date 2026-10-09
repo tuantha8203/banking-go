@@ -1,0 +1,33 @@
+# Written by bg-release-bot (.github/workflows/main.yml) for env kind. Do not edit; roll back with rollback.yml.
+release: sha-023f3f0
+gitSha: 023f3f0b1e5006cc48e25e9555197118b75fa5ed
+core:
+  image: ghcr.io/tuantha8203/banking-go/core
+  digest: sha256:a564e09fa04f9c6402593cca83c6a63620304f647b32ef6c2eb5e1c7309f2975
+core-worker:
+  image: ghcr.io/tuantha8203/banking-go/core
+  digest: sha256:a564e09fa04f9c6402593cca83c6a63620304f647b32ef6c2eb5e1c7309f2975
+public-api:
+  image: ghcr.io/tuantha8203/banking-go/public-api
+  digest: sha256:a6d911e54be09bef372e68f69f89f8f3071776f2ab83925307006e6934c1c2fc
+admin-api:
+  image: ghcr.io/tuantha8203/banking-go/admin-api
+  digest: sha256:1a98e06004c4c46a704b8f6938a43a5dcbcfc4e249abfb0cee87d63ddb95bb31
+mock-napas:
+  image: ghcr.io/tuantha8203/banking-go/mocks
+  digest: sha256:0d290aaa185ca082ecff8a878b7fa7d8f2369f84f9d5555f4e901f6477b0bafe
+mock-ekyc:
+  image: ghcr.io/tuantha8203/banking-go/mocks
+  digest: sha256:0d290aaa185ca082ecff8a878b7fa7d8f2369f84f9d5555f4e901f6477b0bafe
+mock-otp:
+  image: ghcr.io/tuantha8203/banking-go/mocks
+  digest: sha256:0d290aaa185ca082ecff8a878b7fa7d8f2369f84f9d5555f4e901f6477b0bafe
+mock-gateway:
+  image: ghcr.io/tuantha8203/banking-go/mocks
+  digest: sha256:0d290aaa185ca082ecff8a878b7fa7d8f2369f84f9d5555f4e901f6477b0bafe
+web-customer:
+  image: ghcr.io/tuantha8203/banking-go/web-customer
+  digest: sha256:9981718108897cc3a5027800a7e5e36745a744ea0f5aa63e915c5790807f109f
+web-admin:
+  image: ghcr.io/tuantha8203/banking-go/web-admin
+  digest: sha256:0a9ac211fd0749505326a9c9f6a72ff7f29df93301fbeea9562cc1581fe9e5c7
