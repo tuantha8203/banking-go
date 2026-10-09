@@ -271,11 +271,11 @@ CI gate: chạy migration của commit trên schema của release trước + tes
 | HMAC blind index (mỗi service) | core, public-api | Sealed | SM | Không xoay định kỳ (đổi = reindex), chỉ khi lộ |
 | HMAC webhook mỗi đối tác | core-worker + mock tương ứng | Sealed | SM | 90 ngày, 2 secret active khi xoay (AD-12) |
 | API key gọi đối tác (mock) | core-worker | Sealed | SM | 90 ngày `[D-30]` |
-| GHCR pull | mọi namespace app | Sealed `ghcr-pull` | ESO | Token fine-grained read:packages, 90 ngày `[D-31]` |
 | Telegram bot token, SMTP | Alertmanager / Lambda | Sealed | SM | Khi lộ |
 | Argo CD repo deploy key | Argo CD | Sealed | SM | 180 ngày |
 | Internal CA mTLS | cert-manager | Tự sinh trong cluster | Tự sinh trong cluster | Leaf 90 ngày tự renew |
 
+- GHCR public → không có pull secret; danh tính image kiểm bằng digest + `cosign verify` `[D-31]` `[D-19]`.
 - Sealed Secrets controller key tự renew 30 ngày; backup controller key (mã hóa) ngoài cluster do owner giữ `[D-32]`. Không secret nào trong Git dạng rõ, image hay log (NFR-S7).
 - Ứng dụng đọc secret qua env var lúc khởi động; đổi secret → bump `secretsRevision` trong values (annotation pod template) bằng commit Git → rolling restart. ESO `refreshInterval: 5m` `[D-33]`.
 - GitHub: environment `production` giữ `AWS_ROLE_ARN` (var), `TELEGRAM_BOT_TOKEN`; environment `staging` giữ `ARGOCD_STAGING_TOKEN` (account Argo CD chỉ get/sync) `[D-34]`.
@@ -424,12 +424,14 @@ Phương án cuối: destroy + dựng lại (prod disposable). Staging infra: re
 | D-28 | CI chạy test rollback-compat (migration mới + code release trước); migrator bản cũ là no-op trên schema mới |
 | D-29 | Chu kỳ xoay secret 90/180 ngày như bảng |
 | D-30 | core-worker xác thực với mock bằng API key riêng mỗi đối tác |
-| D-31 | Package GHCR private, pull bằng token fine-grained |
+| D-31 | Package GHCR **public** (repo public, ADR 0012): pull không cần token; danh tính image kiểm bằng digest + `cosign verify` (D-19) |
 | D-32 | Owner giữ bản backup mã hóa của Sealed Secrets controller key ngoài cluster |
 | D-33 | ESO `refreshInterval` 5 phút; restart pod qua `secretsRevision` trong Git |
 | D-34 | GitHub runner gọi Argo CD staging qua API `argocd.stg` bằng token chỉ get/sync; prod dùng `aws eks update-kubeconfig` + `argocd --core` |
 | D-35 | Có cờ `maintenance.enabled` chặn ghi ở Gateway và dừng consumer core-worker |
 | D-36 | Dựng prod mất ~30–45 phút (chưa đo) |
+| D-37 | Repo GitHub **public** (gói Free: ruleset, environment Required reviewers và phút Actions không giới hạn chỉ có cho repo public — ADR 0012); Git chỉ chứa secret dạng ciphertext (Sealed), gitleaks quét toàn lịch sử trước khi public |
+| D-38 | Workflow không dùng `pull_request_target`; PR từ fork không nhận secret/`id-token`; job release (build/ký/push/bump) chỉ chạy trên `main` hoặc `workflow_dispatch` |
 | D-37 | Evidence release lưu ở `docs/releases/<version>.md` + artifact workflow |
 | D-38 | AWS Budget cảnh báo email theo tag `project=banking-go` |
 | D-39 | SPA image dựa trên `nginxinc/nginx-unprivileged` |
