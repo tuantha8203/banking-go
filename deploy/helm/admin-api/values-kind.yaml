@@ -1,0 +1,11 @@
+# env kind (ADR 0011): 1 replica, low requests, https://admin-api.kind.localhost.
+global:
+  otelEndpoint: http://otel-collector.observability.svc:4317
+replicas: 1
+resources:
+  requests: {cpu: 10m, memory: 32Mi}
+  limits: {memory: 128Mi}
+env:
+  BG_ADMIN_API_ENVIRONMENT: kind
+envFromSecrets: [admin-api-env]
+route: {enabled: true, host: admin-api.kind.localhost, pathPrefix: /}

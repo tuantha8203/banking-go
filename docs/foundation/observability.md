@@ -180,15 +180,17 @@ Rule trong `observability/alerts/<group>.yaml` (Prometheus format, AD-13), nhãn
 | `RabbitMQQuorumLost` | staging `count(rabbitmq_identity_info) < 2` | 1m | critical | `rabbitmq-node-down.md` |
 | `CertificateExpiringSoon` | `certmanager_certificate_expiration_timestamp_seconds - time() < 14*86400` | 1h | warning | `certificate-expiry.md` |
 | `CertificateNotReady` | `< 3*86400` hoặc `certmanager_certificate_ready_status{condition="False"} == 1` | 15m | critical | `certificate-expiry.md` |
+| `PodCrashLooping` | `max by (namespace, pod, container) (max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[5m])) >= 1` | 15m | warning | `pod-crashloop.md` |
+| `ArgoCDAppDegraded` | `max by (name) (argocd_app_info{health_status=~"Degraded\|Missing"}) == 1` | 15m | warning | `argocd-app-degraded.md` |
 | `WALArchiveFailing` | staging `increase(cnpg_pg_stat_archiver_failed_count[15m]) > 0` (RPO ≤ 5 phút) | 0m | critical | `backup-failure.md` |
 | `BackupFailed` | staging `time() - cnpg_collector_last_available_backup_timestamp > 26*3600`; prod RDS event `backup` failure | 0m | critical (staging) / warning (prod) | `backup-failure.md` |
 | `LoginFailureSpike` | `sum(rate(banking_identity_login_attempts_total{result!="success"}[5m])) > 3 * sum(rate(…[5m] offset 1d))` and `> 0.5` (/s); tương tự admin `totp_failed` | 10m | warning | `login-failure-spike.md` |
 | `LockoutSpike` | `increase(banking_identity_lockouts_total[15m]) > 10` | 0m | warning | `login-failure-spike.md` |
 | `JobStale` | `time() - banking_job_last_success_timestamp_seconds > 2 * interval(job_name)`; `interval` theo bảng lịch job `nfr.md` § Hiệu năng (một rule mỗi `job_name`) | 0m | warning | `job-stale.md` |
-| `TelemetryPipelineDegraded` | `rate(otelcol_exporter_send_failed_metric_points[5m]) > 0` hoặc Collector down | 10m | warning | `telemetry-pipeline.md` |
+| `TelemetryPipelineDegraded` | `sum(rate(otelcol_exporter_send_failed_*[5m])) > 0` hoặc `up{job="otel-collector"} == 0` hoặc `absent(up{job="otel-collector"})` (giữ nhãn `job`) | 10m | warning | `telemetry-pipeline.md` |
 | `Watchdog` | `vector(1)` (luôn firing; mất = mất alerting) | — | none | `watchdog.md` `[O-14]` |
 
-Ngưỡng outbox, timeout đối tác, login spike là đề xuất `[O-3]` `[O-4]` `[O-15]`; staging giữ thêm rule mặc định của kube-prometheus-stack (node, pod crashloop, PVC đầy) ở mức warning.
+Ngưỡng outbox, timeout đối tác, login spike là đề xuất `[O-3]` `[O-4]` `[O-15]`; không bật `defaultRules` của kube-prometheus-stack (rule không có runbook): pod crashloop là `PodCrashLooping`, rule node/PVC đầy thêm tường minh vào catalog khi dựng staging (v2) `[ADR 0013]`.
 
 ### Routing
 | | Staging | Prod |
@@ -198,6 +200,10 @@ Ngưỡng outbox, timeout đối tác, login spike là đề xuất `[O-3]` `[O-
 | warning | `email_configs` | SNS `bg-prod-alerts-warning` → email |
 | Gom nhóm | `group_by: [alertname, service, env]`, `group_wait 30s`, `group_interval 5m`, `repeat_interval` critical 1h / warning 12h `[O-17]` | Như staging (định nghĩa trong `aws_prometheus_alert_manager_definition`) |
 | Inhibit | critical cùng `alertname`+`service` chặn warning; `RabbitMQQuorumLost` chặn `RabbitMQNodeDown` | Như staging |
+
+Env `kind` (ADR 0011, không cam kết SLO): Alertmanager gửi critical + `Watchdog` → Telegram, còn lại → receiver `null`, không email;
+config từ template `observability/alertmanager/kind.yaml` + Sealed Secret. Pod kind không có egress trực tiếp trên máy dev sau proxy
+công ty → receiver Telegram dùng `http_config.proxy_url` (`TELEGRAM_PROXY_URL`, mặc định HTTPS_PROXY của host khi `make seal`).
 | Nhãn | Collector gắn `env=staging` | `env=prod`; email SNS cần xác nhận lại mỗi lần dựng prod `[O-16]` |
 
 ```yaml
@@ -272,6 +278,8 @@ receivers:
 | `login-failure-spike.md` | Tỷ lệ theo `result`, IP/route, lockout, deploy auth gần nhất | Hồi quy deploy → đề xuất rollback; tấn công → siết rate limit qua Git | Tắt lockout/rate limit |
 | `telemetry-pipeline.md` | Collector pod, `otelcol_exporter_*`, backend (Prometheus/ES/Jaeger/AMP) | Khôi phục Collector/backend qua Git | Bật SDK gửi thẳng backend |
 | `watchdog.md` | Alertmanager/AMP ruler còn chạy, kênh nhận | Khôi phục alerting qua Git/Terraform | Tắt `Watchdog` |
+| `pod-crashloop.md` | `describe`/`logs --previous`, Config/Secret thiếu, OOMKilled, deploy gần nhất | Do image/config mới → đề xuất rollback (digest) hoặc PR revert values; OOM → tăng limit qua PR | `kubectl delete pod` lặp lại; `kubectl edit` Deployment |
+| `argocd-app-degraded.md` | Application conditions, resource đỏ/Events, log Job migrate, commit gây ra | Digest lỗi → owner chạy `rollback.yml`; config lỗi → PR revert | Sync `--force`/`--replace`; tắt auto-sync/selfHeal; `kubectl apply` tay |
 
 ## Post-deploy watch
 Áp dụng sau mỗi `release-prod.yml` (30 phút, chặn release thành công) và sau `staging-verify.yml` (10 phút, không chặn) `[O-20]`.

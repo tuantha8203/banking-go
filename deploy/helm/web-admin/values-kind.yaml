@@ -1,0 +1,10 @@
+# env kind (ADR 0011): https://admin.kind.localhost → API https://admin-api.kind.localhost.
+replicas: 1
+env:
+  BG_API_ORIGIN: https://admin-api.kind.localhost
+route: {enabled: true, host: admin.kind.localhost, pathPrefix: /}
+configFiles:
+  config.js:
+    mountPath: /usr/share/nginx/html/config.js
+    content: |
+      window.__BG_CONFIG__ = { apiBaseUrl: 'https://admin-api.kind.localhost', env: 'kind', release: 'kind' }

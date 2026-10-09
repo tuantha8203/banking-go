@@ -1,0 +1,11 @@
+# deployable    image         command                      app_port  admin_port   (AD-1, D-23: core-worker shares the core image)
+core            core          /usr/local/bin/core          8090      9190
+core-worker     core          /usr/local/bin/core-worker   -         9191
+public-api      public-api    /usr/local/bin/public-api    8081      9181
+admin-api       admin-api     /usr/local/bin/admin-api     8082      9182
+mock-napas      mocks         /usr/local/bin/mock-napas    8101      9201
+mock-ekyc       mocks         /usr/local/bin/mock-ekyc     8102      9202
+mock-otp        mocks         /usr/local/bin/mock-otp      8103      9203
+mock-gateway    mocks         /usr/local/bin/mock-gateway  8104      9204
+web-customer    web-customer  -                            8080      -
+web-admin       web-admin     -                            8080      -

@@ -223,9 +223,10 @@ $DC down -v                          # Also remove volumes (DESTRUCTIVE — ask 
 ### Debugging Network Issues
 
 ```bash
+# RABBITMQ_USER / RABBITMQ_PASS: the local compose defaults (deploy/compose/compose.yaml)
 # Check connectivity from the host
 pg_isready -h localhost -p 5432
-curl -s http://localhost:15672/api/overview -u banking:banking | head   # RabbitMQ management
+curl -s http://localhost:15672/api/overview -u "$RABBITMQ_USER:$RABBITMQ_PASS" | head   # RabbitMQ management
 curl -s http://localhost:9333/cluster/status                           # SeaweedFS master
 
 # Inspect network

@@ -1,0 +1,22 @@
+suite: core-worker chart (env kind)
+templates:
+  - templates/all.yaml
+values:
+  - ../values-kind.yaml
+tests:
+  - it: runs the core image with the core-worker command (D-23)
+    set:
+      core-worker: {image: ghcr.io/acme/banking-go/core, digest: "sha256:5555555555555555555555555555555555555555555555555555555555555555"}
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/acme/banking-go/core@sha256:5555555555555555555555555555555555555555555555555555555555555555
+      - equal: {path: "spec.template.spec.containers[0].command", value: [/usr/local/bin/core-worker]}
+      - equal: {path: "spec.template.spec.containers[0].ports", value: [{name: admin, containerPort: 9191}]}
+  - it: has no route and no migration (core migrates the shared database)
+    set:
+      image.tag: local
+      global.ghOwner: acme
+    asserts:
+      - hasDocuments: {count: 3}

@@ -11,15 +11,15 @@
 - Rollout = Kubernetes rolling update có readiness gate; rollback = `git revert` commit digest → Argo CD sync; DB không bao giờ `down` migration ở staging/prod.
 
 ## Môi trường
-| | Local dev | CI | Staging | Prod |
-|---|---|---|---|---|
-| Mục đích | Code + debug | Gate mọi PR / commit `main` | Tích hợp liên tục, demo E2E, đo SLO/HA (NFR-A1..A4) | Release/demo trên managed AWS |
-| Hạ tầng | `docker compose` trên máy dev | GitHub-hosted runner `ubuntu-latest` | VPS kubeadm 1 CP + 3 worker, K8s 1.36 | AWS: EKS 1.36 + managed services, **ephemeral** |
-| Chạy gì | PostgreSQL 18, RabbitMQ 4.3, SeaweedFS, otelcol-contrib + Jaeger v2 + Prometheus/Grafana (profile `obs`); Go service chạy `go run`/compose; SPA `vite dev`; 4 mock | Lint, unit, integration (testcontainers PG 18 + RabbitMQ 4.3), contract check, scan, build image | Mọi deployable (AD-1) + add-on platform + observability tự dựng | Mọi deployable (kể cả mock) + dịch vụ AWS |
-| Dữ liệu | Seed dev, xóa thoải mái | Container tạm | Dữ liệu demo bền, backup + PITR | Disposable, mất khi destroy |
-| Deploy | Thủ công | — | Tự động mỗi commit `main` (digest bump) | `release-prod.yml` + owner duyệt |
-| Thời gian sống | — | Mỗi job | Liên tục | Chỉ trong cửa sổ release/demo |
-| Rollback | `docker compose down -v` + `git checkout` | n/a — chạy lại job / revert PR | `rollback.yml` / `db-pitr.yml` theo § Rollback | `rollback.yml` / `db-pitr.yml` theo § Rollback (owner duyệt) |
+| | Local dev | Kind | CI | Staging | Prod |
+|---|---|---|---|---|---|
+| Mục đích | Code + debug | Thử GitOps/Helm/add-on/observability trước staging (ADR 0011) | Gate mọi PR / commit `main` | Tích hợp liên tục, demo E2E, đo SLO/HA (NFR-A1..A4) | Release/demo trên managed AWS |
+| Hạ tầng | `docker compose` trên máy dev | kind 1.36 trên máy dev, 1 CP + 2 worker | GitHub-hosted runner `ubuntu-latest` | VPS kubeadm 1 CP + 3 worker, K8s 1.36 | AWS: EKS 1.36 + managed services, **ephemeral** |
+| Chạy gì | PostgreSQL 18, RabbitMQ 4.3, SeaweedFS, otelcol-contrib + Jaeger v2 + Prometheus/Grafana (profile `obs`); Go service chạy `go run`/compose; SPA `vite dev`; 4 mock | Mọi deployable + add-on platform bản nhẹ (1 replica, không ECK; Jaeger in-memory) | Lint, unit, integration (testcontainers PG 18 + RabbitMQ 4.3), contract check, scan, build image | Mọi deployable (AD-1) + add-on platform + observability tự dựng | Mọi deployable (kể cả mock) + dịch vụ AWS |
+| Dữ liệu | Seed dev, xóa thoải mái | Seed dev, xóa cluster là mất | Container tạm | Dữ liệu demo bền, backup + PITR | Disposable, mất khi destroy |
+| Deploy | Thủ công | Tự động mỗi commit `main` (bot bump `deploy/releases/kind.yaml`, Argo CD trên kind kéo GitHub) | — | Tự động mỗi commit `main` (digest bump) | `release-prod.yml` + owner duyệt |
+| Thời gian sống | — | Khi dev bật (`make kind-up` / `kind-down`) | Mỗi job | Liên tục | Chỉ trong cửa sổ release/demo |
+| Rollback | `docker compose down -v` + `git checkout` | `rollback.yml -f env=kind` | n/a — chạy lại job / revert PR | `rollback.yml` / `db-pitr.yml` theo § Rollback | `rollback.yml` / `db-pitr.yml` theo § Rollback (owner duyệt) |
 
 Compose dùng image upstream chính thức (không Bitnami); file `deploy/compose/compose.yaml` + `.env.example` `[D-1]`.
 
@@ -69,7 +69,7 @@ Root app `bg-staging-root` → các Application con; thứ tự bằng `argocd.a
 | -30 | Gateway API CRDs | v1.6.x standard | Manifest upstream (cài trước controller) |
 | -25 | Argo CD (self-managed) | v3.5 | Chart `argo/argo-cd` |
 | -20 | cert-manager (+ ClusterIssuer Let's Encrypt, internal CA cho mTLS) | v1.21.x | Chart jetstack |
-| -20 | Sealed Secrets | v0.40 | Chart bitnami-labs **controller** (repo sealed-secrets, không phải Bitnami charts catalog) `[D-8]` |
+| -20 | Sealed Secrets | v0.40 | Chart **controller** của project sealed-secrets (repo `https://bitnami.github.io/sealed-secrets`, không phải Bitnami charts catalog) `[D-8]` |
 | -20 | Cilium, local-path-provisioner, metrics-server | pin trong values `[D-3]` `[D-4]` | Chart upstream |
 | -15 | Traefik (Gateway provider) | v3.7 | Chart traefik |
 | -15 | CloudNativePG operator + Barman Cloud plugin | 1.30 | Chart cloudnative-pg |
@@ -81,7 +81,7 @@ Root app `bg-staging-root` → các Application con; thứ tự bằng `argocd.a
 | -10 | Jaeger v2 (storage ES) | v2.21 / chart 4.14 | Chart jaegertracing |
 | -10 | OpenTelemetry Collector contrib | v0.162 | Chart open-telemetry, config `deploy/collector/staging.yaml` |
 | -5 | Data: CNPG `Cluster pg` (3 instance, sync ANY 1), `Database`/managed roles; `RabbitmqCluster rmq` (3); topology `deploy/messaging/`; bucket SeaweedFS | — | CR trong Git |
-| 0 | Apps: 4 service + 4 mock + 2 SPA (Helm `deploy/helm/<deployable>`, `values-staging.yaml` + `deploy/releases/staging.yaml`) | digest | Argo CD auto-sync, prune, selfHeal |
+| 0 | Apps: 4 service + 4 mock + 2 SPA (Helm `deploy/helm/<deployable>`, `values-staging.yaml` + `deploy/releases/staging.yaml`; env kind: `values-kind.yaml` + `deploy/releases/kind.yaml`, app-of-apps `deploy/argocd/kind/`) | digest | Argo CD auto-sync, prune, selfHeal |
 
 ### Capacity budget staging (spine Deferred) `[D-10]`
 Tổng request bộ nhớ mục tiêu ≤ 18 GiB / 24 GiB worker (chừa ~1 GiB/node cho kubelet/system). Xem lại sau load test R3.
@@ -181,14 +181,14 @@ flowchart LR
 | SAST | CodeQL (Go, TS) + gosec qua golangci-lint |
 | Deps | govulncheck, osv-scanner (Go + pnpm lockfile) |
 | Image scan | Trivy (OS + lib) |
-| SBOM / ký | syft (SPDX JSON) + cosign v2 keyless; verify `cosign verify --certificate-identity-regexp '^https://github.com/<owner>/banking-go/.github/workflows/main.yml@refs/heads/main$' --certificate-oidc-issuer https://token.actions.githubusercontent.com` |
+| SBOM / ký | syft (SPDX JSON) + cosign v3 keyless; verify `cosign verify --certificate-identity-regexp '^https://github.com/<owner>/banking-go/.github/workflows/main.yml@refs/heads/main$' --certificate-oidc-issuer https://token.actions.githubusercontent.com` |
 | E2E / DAST | Playwright (`tests/e2e`) với mock failure mode; OWASP ZAP baseline trên `*.stg` |
 
 ### GitHub Actions workflows (`.github/workflows/`)
 | File | Trigger | Việc | Environment |
 |---|---|---|---|
 | `ci.yml` | `pull_request`, `workflow_call` | Lint, test, contract check, gitleaks, SAST, deps scan; build image không push | — |
-| `main.yml` | `push` → `main` | Gọi `ci.yml` → build → scan → SBOM/ký → push GHCR → commit bump `deploy/releases/staging.yaml` (concurrency `staging-deploy`) | — |
+| `main.yml` | `push` → `main` | Gọi `ci.yml` → build → scan → SBOM/ký → push GHCR → commit bump `deploy/releases/staging.yaml` và `deploy/releases/kind.yaml` (concurrency `staging-deploy`) | — |
 | `staging-verify.yml` | `workflow_run` (`main.yml` success), `workflow_dispatch` | `argocd app wait` staging → smoke → E2E → DAST → `cosign attest --type staging-verified` cho từng digest → watch 10 phút (không chặn, `observability.md` § Post-deploy watch) | `staging` |
 | `staging-drills.yml` | `workflow_dispatch` (`drill`: `chaos\|pitr\|node-drain\|failover\|load\|all`) | NFR-M2, NFR-A2, NFR-A3, NFR-A4, NFR-P1 trên staging; mở PR lưu báo cáo `tests/*/reports/` | `staging` |
 | `staging-infra.yml` | `workflow_dispatch` | Ansible `infra/staging/` (kubeadm, OS patch, nâng K8s) `[D-21]` | `staging-infra` (owner duyệt) |
@@ -271,11 +271,11 @@ CI gate: chạy migration của commit trên schema của release trước + tes
 | HMAC blind index (mỗi service) | core, public-api | Sealed | SM | Không xoay định kỳ (đổi = reindex), chỉ khi lộ |
 | HMAC webhook mỗi đối tác | core-worker + mock tương ứng | Sealed | SM | 90 ngày, 2 secret active khi xoay (AD-12) |
 | API key gọi đối tác (mock) | core-worker | Sealed | SM | 90 ngày `[D-30]` |
-| GHCR pull | mọi namespace app | Sealed `ghcr-pull` | ESO | Token fine-grained read:packages, 90 ngày `[D-31]` |
 | Telegram bot token, SMTP | Alertmanager / Lambda | Sealed | SM | Khi lộ |
 | Argo CD repo deploy key | Argo CD | Sealed | SM | 180 ngày |
 | Internal CA mTLS | cert-manager | Tự sinh trong cluster | Tự sinh trong cluster | Leaf 90 ngày tự renew |
 
+- GHCR public → không có pull secret; danh tính image kiểm bằng digest + `cosign verify` `[D-31]` `[D-19]`.
 - Sealed Secrets controller key tự renew 30 ngày; backup controller key (mã hóa) ngoài cluster do owner giữ `[D-32]`. Không secret nào trong Git dạng rõ, image hay log (NFR-S7).
 - Ứng dụng đọc secret qua env var lúc khởi động; đổi secret → bump `secretsRevision` trong values (annotation pod template) bằng commit Git → rolling restart. ESO `refreshInterval: 5m` `[D-33]`.
 - GitHub: environment `production` giữ `AWS_ROLE_ARN` (var), `TELEGRAM_BOT_TOKEN`; environment `staging` giữ `ARGOCD_STAGING_TOKEN` (account Argo CD chỉ get/sync) `[D-34]`.
@@ -401,7 +401,7 @@ Phương án cuối: destroy + dựng lại (prod disposable). Staging infra: re
 | D-5 | Không cloud LB ở VPS: Traefik DaemonSet hostPort trên 3 worker, DNS A record trỏ 3 worker |
 | D-6 | Mã hóa đĩa staging: của nhà cung cấp nếu có, không thì LUKS qua Ansible |
 | D-7 | Snapshot etcd hằng ngày lên SeaweedFS |
-| D-8 | Sealed Secrets cài bằng chart của project sealed-secrets (repo bitnami-labs, không phải Bitnami charts catalog); image controller của project nằm dưới namespace `bitnami` trên registry — owner đã xác nhận là ngoại lệ của AD-14 (2026-10-06) |
+| D-8 | Sealed Secrets cài bằng chart của project sealed-secrets (chart repo `https://bitnami.github.io/sealed-secrets`, mã nguồn bitnami-labs; không phải Bitnami charts catalog); image controller của project nằm dưới namespace `bitnami` trên registry — owner đã xác nhận là ngoại lệ của AD-14 (2026-10-06) |
 | D-9 | Topology RabbitMQ (exchange, retry, DLQ, user) khai báo bằng Messaging Topology Operator ở cả hai env; prod trỏ tới Amazon MQ qua `connectionSecret` (cluster ngoài) |
 | D-10 | Capacity budget staging theo bảng, xem lại sau load test R3 |
 | D-11 | Region prod `ap-southeast-1` |
@@ -424,12 +424,14 @@ Phương án cuối: destroy + dựng lại (prod disposable). Staging infra: re
 | D-28 | CI chạy test rollback-compat (migration mới + code release trước); migrator bản cũ là no-op trên schema mới |
 | D-29 | Chu kỳ xoay secret 90/180 ngày như bảng |
 | D-30 | core-worker xác thực với mock bằng API key riêng mỗi đối tác |
-| D-31 | Package GHCR private, pull bằng token fine-grained |
+| D-31 | Package GHCR **public** (repo public, ADR 0012): pull không cần token; danh tính image kiểm bằng digest + `cosign verify` (D-19) |
 | D-32 | Owner giữ bản backup mã hóa của Sealed Secrets controller key ngoài cluster |
 | D-33 | ESO `refreshInterval` 5 phút; restart pod qua `secretsRevision` trong Git |
 | D-34 | GitHub runner gọi Argo CD staging qua API `argocd.stg` bằng token chỉ get/sync; prod dùng `aws eks update-kubeconfig` + `argocd --core` |
 | D-35 | Có cờ `maintenance.enabled` chặn ghi ở Gateway và dừng consumer core-worker |
 | D-36 | Dựng prod mất ~30–45 phút (chưa đo) |
+| D-37 | Repo GitHub **public** (gói Free: ruleset, environment Required reviewers và phút Actions không giới hạn chỉ có cho repo public — ADR 0012); Git chỉ chứa secret dạng ciphertext (Sealed), gitleaks quét toàn lịch sử trước khi public |
+| D-38 | Workflow không dùng `pull_request_target`; PR từ fork không nhận secret/`id-token`; job release (build/ký/push/bump) chỉ chạy trên `main` hoặc `workflow_dispatch` |
 | D-37 | Evidence release lưu ở `docs/releases/<version>.md` + artifact workflow |
 | D-38 | AWS Budget cảnh báo email theo tag `project=banking-go` |
 | D-39 | SPA image dựa trên `nginxinc/nginx-unprivileged` |

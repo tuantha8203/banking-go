@@ -1,0 +1,249 @@
+{
+  "feature": "platform",
+  "version": "v1",
+  "sprints": [
+    {
+      "id": "S1",
+      "goal": "Image + chart chạy trên kind (cài bằng helm trực tiếp, chưa cần GitHub)",
+      "status": "done"
+    },
+    {
+      "id": "S2",
+      "goal": "Observability as code trên kind: trace + RED + alert + dashboard + Telegram + runbook",
+      "status": "done"
+    },
+    {
+      "id": "S3",
+      "goal": "GitOps + pipeline thật (repo GitHub): CI, main.yml ký + bump digest, rollback, app-of-apps, nghiệm thu",
+      "status": "active"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "sprint": "S1",
+      "name": "Pin CLI k8s/devops vào `./bin` (`make tools-k8s`)",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "make tools-k8s && scripts/check-k8s-tools.sh → 12 \"ok\", \"all k8s tools pinned\", exit 0; make gen && git diff --exit-code pkg/gen services/*/api/openapi → exit 0; make lint → exit 0; bin/actionlint .github/workflows/*.yml → exit 0. Lệch plan: actionlint tải binary + sha256 (tools/k8s-tools.lock) thay vì go tool — actionlint v1.7.12 cần go.yaml.in/yaml/v4 rc.3, yq v4.54.1 kéo rc.6 (API vỡ), không build chung một go.mod."
+    },
+    {
+      "id": "T2",
+      "sprint": "S1",
+      "name": "Subcommand `migrate up` (goose, migration embed) cho core/public-api/admin-api",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "make test-one PKG=./pkg/migrate → 3 PASS; go test -tags integration -count=1 -run TestUpAppliesOnceAndIsSafeToRerun ./pkg/migrate → ok (Postgres 18.6 testcontainers, 85s); make test-one PKG=./services/{core/cmd/core,public-api/cmd/public-api,admin-api/cmd/admin-api} RUN=TestMigrate → 3×3 PASS; make test → exit 0; make lint → exit 0; make up && (set -a; . ./.env.example) && go run ./services/{core,public-api,admin-api}/cmd/<svc> migrate up → JSON \"migrate: no migrations, nothing to do\", exit 0 cả 3. services/mocks/go.mod không đổi sau go mod tidy (mocks không dùng pkg/migrate)."
+    },
+    {
+      "id": "T3",
+      "sprint": "S1",
+      "name": "Dockerfile Go (core + core-worker, public-api, admin-api, mocks × 4) + `make images` + `make image-smoke`",
+      "dependencies": [
+        "T2"
+      ],
+      "status": "done",
+      "evidence": "make images (4 image: core, public-api, admin-api, mocks; exit 0) && make image-smoke → 8× \"ok <deployable> /livez\" + 3× \"migrate up → no-op\", \"image-smoke: all images passed\" (exit 0); user 65532:65532, label version=sha-a5a56cd revision=a5a56cd…; make test-one PKG=./pkg/buildinfo RUN=TestDefaults PASS; make lint exit 0; make test exit 0. Size core:local 58.6MB unpacked / 15MB compressed (plan expected <40MB)."
+    },
+    {
+      "id": "T4",
+      "sprint": "S1",
+      "name": "Dockerfile SPA + nginx + `config.js` runtime (`@banking-go/runtime-config`)",
+      "dependencies": [
+        "T3"
+      ],
+      "status": "done",
+      "evidence": "make test-one WEB=@banking-go/runtime-config → 3 passed; make images (6 image, exit 0) && make image-smoke → 8× Go /livez + 2× \"ok web-* nginx: SPA, config.js, cache headers, CSP\" (uid 101, --read-only + tmpfs /tmp) + 3× migrate no-op, \"image-smoke: all images passed\"; make test-web exit 0 (9 tests); make lint exit 0; make e2e 2 passed; ./init.sh Baseline OK. images-spa forwards PROXY_BUILD_ARGS like images-go. Size web-*:local 90.9MB."
+    },
+    {
+      "id": "T5",
+      "sprint": "S1",
+      "name": "Library chart phần 1 (Deployment, Service, ServiceAccount, ConfigMap) + helm-unittest",
+      "dependencies": [
+        "T1"
+      ],
+      "status": "done",
+      "evidence": "make helm-test → Charts: 1 passed, Test Suites: 2 passed, Tests: 16 passed (0.05s); mutation check (maxUnavailable 1, /readyz→/ready) → 2 failed rồi khôi phục; helm lint _libtest → 0 failed; make lint → exit 0. Ghi chú: test từ plan có 11 path [0] không quote trong flow mapping (YAML lỗi) → đã quote, không đổi assertion; helm-test loop thêm '|| exit 1' (fail-fast)."
+    },
+    {
+      "id": "T6",
+      "sprint": "S1",
+      "name": "Library chart phần 2 (HTTPRoute, PDB, migration PreSync Job, Certificate mTLS) + helm-unittest",
+      "dependencies": [
+        "T5"
+      ],
+      "status": "done",
+      "evidence": "make helm-test → Charts: 1 passed, Test Suites: 6 passed, Tests: 25 passed (RED trước đó: 4 suites/7 tests fail); mutation check (PDB minAvailable 2, hook PreSync→Sync) → 2 suites fail rồi khôi phục; helm lint _libtest (route+migration+mtls+replicas=2) → 0 failed, render đủ PDB/HTTPRoute/Job/Certificate; make lint → exit 0. Template copy nguyên văn từ plan."
+    },
+    {
+      "id": "T7",
+      "sprint": "S1",
+      "name": "10 chart mỏng + `values-kind.yaml` + `make helm-lint helm-test` (kubeconform k8s 1.36 + CRD catalog)",
+      "dependencies": [
+        "T6",
+        "T4"
+      ],
+      "status": "done",
+      "evidence": "make helm-test → _libtest 25 passed, core-worker 2 passed, public-api 3 passed, web-customer 3 passed (exit 0); make helm-lint → 10× \"1 chart(s) linted, 0 chart(s) failed\" + kubeconform k8s 1.36 + CRD catalog Valid 3–5/Invalid 0/Errors 0/Skipped 0 mỗi chart (exit 0); make lint exit 0; ./init.sh Baseline OK. Lệch plan: (1) test plan có path [0] không quote trong flow mapping (YAML lỗi) → quote; (2) test chỉ set image.tag bị guard ghOwner của lib (T5) chặn → thêm global.ghOwner: acme vào set (owner duyệt), không đổi assertion; (3) Makefile helm-deps/lint/test thêm `|| exit 1` để fail-fast (giữ hành vi T5)."
+    },
+    {
+      "id": "T8",
+      "sprint": "S1",
+      "name": "kind config + `bootstrap.sh` (idempotent, khôi phục key Sealed Secrets, Argo CD) + `make kind-up kind-down`",
+      "dependencies": [
+        "T1"
+      ],
+      "status": "done",
+      "evidence": "deploy/kind/check-cluster.sh trước implement → \"kubectl context is '', want kind-banking-go\", exit 1 (RED). make kind-up lần 1 → \"[bootstrap] creating cluster banking-go\", Argo CD chart 10.9.6 REVISION 1, \"ok   kind cluster banking-go: 3 nodes v1.36.4, 80/443 on control-plane, Argo CD running\", exit 0 (5m58s, gồm pull image qua proxy); lần 2 → \"cluster banking-go exists\", REVISION 2, ok, exit 0 (9s). make kind-down → \"[sealed-key] no controller key in kube-system yet\" (bỏ qua nhờ -), xóa 3 node, exit 0; make kind-up dựng lại → ok, exit 0 (2m55s). sealed-key.sh với BG_CONFIG_DIR tạm + secret giả có nhãn sealed-secrets-key: backup ghi key 0600 (dir 700, không để lại .tmp khi --fetch-cert lỗi vì chưa có controller), restore apply lại secret; arg sai → usage exit 2. make lint → exit 0. Lệch plan: thêm trap xóa file .tmp trong sealed-key.sh. Không có shellcheck trên máy (chỉ bash -n). [Sau review S1 (40644b6, T22): kind-down không còn '-' — backup chỉ khi cluster tồn tại, lỗi `kind get clusters`/backup thì dừng trước delete; sealed-key.sh luôn dùng --context kind-banking-go; chưa có key → exit 0 (post hook dùng --require-key).]"
+    },
+    {
+      "id": "T9",
+      "sprint": "S1",
+      "name": "Add-on wave -30/-20/-19/-18 (Gateway API, cert-manager + ClusterIssuer, Sealed Secrets, Traefik, CNPG op, RabbitMQ ops) + catalog + `make kind-platform kind-ca`",
+      "dependencies": [
+        "T8"
+      ],
+      "status": "done",
+      "evidence": "deploy/kind/check-platform.sh trước implement → \"FAIL: Gateway API CRDs bundle-version= (want v1.6.2)\", exit 1 (RED). scripts/vendor-manifests.sh → 3 \"vendored\", --check → 3 \"ok\" (sha256 khớp vendor.lock). make kind-platform lần 1 → sealed-secrets-controller ImagePullBackOff do Docker Hub 429 (pull ẩn danh trong node kind qua IP proxy dùng chung) → helm timeout, exit 2; xử lý tay: docker pull trên host + docker save --platform linux/amd64 + kind load image-archive cho bitnami/sealed-secrets-controller:0.40.0 và traefik:v3.7.13 (kind load docker-image lỗi digest multi-arch). make kind-platform lần 2 → wave -30…-18, \"kind-platform: done\", check 13 dòng ok (CRD v1.6.2, 6 deployment, 3 ClusterIssuer, Gateway Programmed, TLS :443 do kind CA + 404, key backup), exit 0 (1m50s). make kind-ca → subject=CN = banking-go kind root CA. make kind-platform lần 3 (idempotent) → exit 0, 0 dòng conflict/error (12s). make lint → exit 0. Lệch plan: `|| true` ở dòng đọc bundle-version trong check (commit test). Chưa xử lý: 429 Docker Hub trong node kind làm make kind-platform từ cluster sạch có thể fail — đề xuất việc sprint sau."
+    },
+    {
+      "id": "T10",
+      "sprint": "S1",
+      "name": "Data wave -15/-14 (CNPG `Cluster pg`, `RabbitmqCluster`, topology, SeaweedFS + bucket) + Sealed Secrets + `make seal`",
+      "dependencies": [
+        "T9"
+      ],
+      "status": "done",
+      "evidence": "make seal → 17 \"sealed …\" + \"ok   no plaintext Secret under deploy/\"; deploy/secrets/kind.env 600 + git-ignored. make kind-platform exit 0: waves -30 namespaces, -18 kind-secrets, -15 postgres/rabbitmq/seaweedfs, -14 messaging; check-platform: \"ok   postgres pg: databases + 6 managed roles\", \"ok   rabbitmq rmq: exchanges, retry queues, users\", \"ok   seaweedfs bucket banking-kind\". gitleaks v8.30 (with .gitleaks.toml) on committable deploy/ files: \"no leaks found\". make lint exit 0. Lệch plan: (1) seal-kind.sh gắn label rabbitmq.com/topology-operator=true cho rmq-user-* (webhook Topology Operator v1.20 bắt buộc); (2) thêm .gitleaks.toml allowlist chỉ deploy/secrets/kind/*.sealed.yaml (user duyệt; ciphertext dính generic-api-key); (3) S3 service thật là seaweedfs-all-in-one:8333 (đã sửa Interfaces); (4) docker.io 429 → side-load rabbitmq:4.3.6-management + chrislusf/seaweedfs:4.48 bằng kind load image-archive. RabbitmqCluster có cảnh báo NoWarnings=False MemoryRequestAndLimitDifferent (giữ theo plan)."
+    },
+    {
+      "id": "T11",
+      "sprint": "S1",
+      "name": "`make kind-load kind-apps` — 10 chart chạy trên kind, Job migration Completed",
+      "dependencies": [
+        "T7",
+        "T10"
+      ],
+      "status": "done",
+      "evidence": "make images kind-load kind-apps → exit 0: 10 \"== <deployable>\" (helm REVISION 1), \"kind-apps: done\", check-apps: 10 \"ok deployment\", 3 \"ok job {core,public-api,admin-api}-migrate Completed\". Re-run make kind-apps → exit 0, 10× REVISION 2, kubectl get jobs: 3 Complete 1/1, log \"migrate: no migrations, nothing to do\". make lint exit 0."
+    },
+    {
+      "id": "T12",
+      "sprint": "S1",
+      "name": "`make kind-smoke` (4 host qua Traefik, Job migration, digest vs `deploy/releases/kind.yaml`)",
+      "dependencies": [
+        "T11"
+      ],
+      "status": "done",
+      "evidence": "make kind-smoke → 4 host ok (api/admin-api /v1/ping 200 {\"status\":\"ok\"}, app/admin 200 HTML), 3 job Completed (core/public-api/admin-api-migrate), \"skip digest check: deploy/releases/kind.yaml not found\", \"kind-smoke: all checks passed\", exit 0. Fail thật: scale deploy/public-api=0 → \"FAIL: https://api.kind.localhost/v1/ping → 503 no available server\", exit 2; scale lại 1 → pass. RELEASES_FILE digest giả → \"FAIL: core runs …@sha256:134cb32…, want @sha256:deadbeef\". make lint exit 0."
+    },
+    {
+      "id": "T22",
+      "sprint": "S2",
+      "name": "Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`)",
+      "dependencies": [
+        "T12"
+      ],
+      "status": "done",
+      "evidence": "RED (b0beed1): make kind-test → No rule; test-sealed-key.sh → \"FAIL: kind-down succeeded although 'kind get clusters' failed\"; check-platform với backup giả → exit 0; image-smoke → \"FAIL: web-customer: /config.js without a ConfigMap → 200, want 404\"; check-go-mod-tidy → \"FAIL: ./pkg is not tidy\". GREEN: make kind-test → 5 ok (backup/kind-ca theo context kind, kind-down dừng khi backup lỗi và khi listing lỗi, check-platform từ chối backup stale), \"kind-test: all checks passed\", exit 0; check-platform thật → \"ok   Sealed Secrets key backed up (matches the running key)\"; make kind-platform MAX_WAVE=-20 → post hook `backup --require-key` ghi backup, exit 0; scripts/check-go-mod-tidy.sh → 5 module tidy; make images-spa + image-smoke → \"ships no /config.js of its own\" cho 2 SPA, \"image-smoke: all images passed\"; make kind-load kind-apps + kind-smoke → all checks passed, https://app|admin.kind.localhost/config.js vẫn từ ConfigMap (env kind); make test exit 0; make lint exit 0; make helm-lint helm-test exit 0. R4: ghi chú vào evidence T8 + plan T8. Lệch plan: thêm scripts/check-go-mod-tidy.sh (kiểm F5 cho mọi module go.work)."
+    },
+    {
+      "id": "T13",
+      "sprint": "S2",
+      "name": "kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry",
+      "dependencies": [
+        "T12"
+      ],
+      "status": "done",
+      "evidence": "RED (debdcb8): collector-validate → no such file deploy/collector/kind.yaml; kind-smoke → \"FAIL: no public-api trace in Jaeger\"; check-platform → namespaces \"monitoring\" not found. GREEN: make collector-validate → \"ok   collector config valid (otel/opentelemetry-collector-contrib:0.162.0)\"; make helm-lint helm-test exit 0; make kind-platform → wave -30 prometheus-operator-crds trước cert-manager, wave -10 kube-prometheus-stack/jaeger/otel-collector/ops-routes, check-platform: grafana/operator/jaeger/otel-collector ok, \"ok   Grafana 12.4.12\", grafana → 302, jaeger/argocd/rabbitmq → 200, exit 0; make kind-apps → pod có OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability.svc:4317; make kind-smoke → \"ok   Jaeger has N public-api span(s)\", \"ok   Prometheus RED rate public-api = 0.31 req/s\", all checks passed (cả ngay sau rollout restart public-api); make lint/test/kind-test exit 0. Sửa test: lần chạy đầu sau kind-apps FAIL \"Prometheus RED rate for public-api is 0\" vì cả loạt 20 request nằm trong lần export đầu (counter xuất hiện = 21 rồi đứng yên → rate 0); vòng chờ RED nay gửi thêm 5 request mỗi lần thử (assertion giữ nguyên rate > 0). Rủi ro: máy 15.4 GiB RAM + VS Code/Chrome/Discord/mongod → swap đầy, load ~98, kube-apiserver restart, controller CrashLoopBackOff ~2 phút rồi tự hồi; stack observability làm kind cần thêm RAM. Collector 0.162.0 cảnh báo alias deprecated: prometheusremotewrite → prometheus_remote_write, resource_to_telemetry_conversion → resource_constant_labels (vẫn chạy)."
+    },
+    {
+      "id": "T14",
+      "sprint": "S2",
+      "name": "Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra",
+      "dependencies": [
+        "T13"
+      ],
+      "status": "done",
+      "evidence": "RED (44212f0): make alerts-test → \"path 'observability/alerts/*.yaml' does not exist\"; promtool test → FAILED got:[]; check-platform → \"FAIL: rule group bg-sli not loaded ()\". GREEN: promtool check rules → platform.yaml \"SUCCESS: 6 rules found\", slo.yaml \"SUCCESS: 11 rules found\"; promtool test rules → SUCCESS ×2; make obs-gen → \"generated 2 PrometheusRule file(s)\"; make alerts-test → kubeconform \"Valid: 2, Invalid: 0\", exit 0; make obs-gen-check exit 0 (sau commit); scripts/kind-platform.sh observability-as-code → \"== wave -9: observability-as-code\", PrometheusRule bg-platform/bg-slo applied; check-platform → \"ok   rule groups bg-sli, bg-slo, bg-platform loaded\", \"ok   Watchdog firing\", exit 0 (cả khi xóa rule rồi apply lại); trên cluster chỉ Watchdog firing, up{job=\"otel-collector\"} đúng job; make lint/test exit 0. Lệch plan: (1) TelemetryPipelineDegraded: `absent(up{job=\"otel-collector\"} == 1)` mất nhãn job (test \"Collector down\" FAIL) → `up{job=\"otel-collector\"} == 0 or absent(up{job=\"otel-collector\"})`; (2) check-platform poll rule groups tới 2 phút (operator reload Prometheus 30–60 s sau khi apply; lần đầu FAIL \"bg-sli not loaded ()\" rồi tự load), assertion giữ nguyên; (3) chạy `scripts/kind-platform.sh observability-as-code` + check-platform thay vì full `make kind-platform` (máy còn ~2 GiB RAM, xem T13)."
+    },
+    {
+      "id": "T15",
+      "sprint": "S2",
+      "name": "Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test",
+      "dependencies": [
+        "T14"
+      ],
+      "status": "done",
+      "evidence": "RED (7afacdf): make dashboards-test → \"FAIL: no dashboards in observability/dashboards\"; kind-smoke → \"FAIL: Grafana dashboard bg-service-overview missing\". GREEN: make dashboards-test → ok platform.json + service-overview.json; make obs-gen → \"generated 2 PrometheusRule and 2 dashboard file(s)\"; make alerts-test Valid 2; make kind-up (Argo CD controller metrics + ServiceMonitor) exit 0; scripts/kind-platform.sh observability-as-code → ConfigMap bg-dashboard-*, PodMonitor pg, ServiceMonitor rmq applied; make kind-smoke → \"ok   Grafana dashboard bg-service-overview\", \"ok   Grafana dashboard bg-platform\", all checks passed; check-platform exit 0; prom: max(cnpg_collector_up)=1, up rmq=1, up argocd=1 (argocd_app_info chưa có series vì chưa có Application — S3/T21); make lint/test exit 0; make obs-gen-check exit 0 (sau commit). Lệch plan: chạy addon observability-as-code thay full make kind-platform (RAM máy ~1.8 GiB free)."
+    },
+    {
+      "id": "T16",
+      "sprint": "S2",
+      "name": "Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test",
+      "dependencies": [
+        "T14",
+        "T10"
+      ],
+      "status": "done",
+      "evidence": "RED (9e1b74b): make alertmanager-test → \"scripts/render-alertmanager.sh: No such file or directory\"; kind-smoke → \"FAIL: telegram notifications sent=0 failed=0\". Part 1 (d9f6dd0): template + renderer + seal wiring, make alertmanager-test → \"ok   alertmanager kind config: valid, critical + Watchdog → telegram\". Bị chặn 2 lần chờ owner (TELEGRAM_* chưa có trong kind.env; rồi thiếu '=' ở dòng 17). GREEN: make seal → \"sealed monitoring/alertmanager-kind-config\", \"ok   no plaintext Secret under deploy/\" (17 file sealed khác chỉ đổi ciphertext → khôi phục bản đã commit); configSecret: alertmanager-kind-config trong kube-prometheus-stack values; scripts/kind-platform.sh kind-secrets kube-prometheus-stack exit 0; Alertmanager /api/v2/receivers = [null, telegram]; make kind-smoke → \"ok   Alertmanager delivered 1 telegram notification(s), 0 failed\", all checks passed; check-platform exit 0; make lint/test exit 0. kind.env.example: AI không được đọc deploy/secrets/ — owner xác nhận có dòng TELEGRAM_*. | MỞ LẠI (owner chưa nhận Watchdog): smoke §7 cũ pass giả — alertmanager_notifications_failed_total chỉ tăng khi hết retry; log: \"dial tcp 149.154.166.110:443: connect: connection timed out\" (pod kind không qua proxy công ty). RED (dceb66f): kind-smoke §7 mới (requests_total - requests_failed_total > 0) → \"FAIL: no successful telegram request (4 attempted, all failed)\"; alertmanager-test → \"FAIL: TELEGRAM_PROXY_URL must become telegram http_config.proxy_url\". GREEN: render-alertmanager.sh thêm http_config.proxy_url khi có TELEGRAM_PROXY_URL (kiểm định dạng, không credentials); seal-kind.sh lấy TELEGRAM_PROXY_URL từ kind.env, mặc định HTTPS_PROXY của host; make seal → \"alertmanager telegram proxy: <proxy công ty>\", \"sealed monitoring/alertmanager-kind-config\"; kind-smoke → \"ok   Alertmanager delivered 1 telegram request(s) successfully\", all checks passed; alertmanager-test ok; make lint/test exit 0. | Owner xác nhận đã nhận tin Watchdog trên Telegram (2026-10-09)."
+    },
+    {
+      "id": "T17",
+      "sprint": "S2",
+      "name": "Runbook + `make kind-watch`",
+      "dependencies": [
+        "T14"
+      ],
+      "status": "done",
+      "evidence": "RED (41af598): make runbooks-test → \"FAIL: missing runbook observability/runbooks/argocd-app-degraded.md\". GREEN: make runbooks-test → 7 dòng ok (argocd-app-degraded, certificate-expiry, error-budget-burn, latency-p95-breach, pod-crashloop, telemetry-pipeline, watchdog); WATCH_MINUTES=2 make kind-watch → 3 dòng critical=0 error_ratio_5m=0 new_restarts=0, \"watch ok: 2 phút không vượt ngưỡng\", exit 0; tiêm lỗi `kubectl -n banking set env deploy/mock-otp BG_MOCK_OTP_ADMIN_ADDR=:bad` + WATCH_MINUTES=3 WATCH_STEP_SECONDS=30 make kind-watch → new_restarts=1, \"WATCH FAILED: pod restarts in namespace banking\", \"Đề xuất (owner quyết): gh workflow run rollback.yml -f env=kind -f revert_sha=<bump_sha>\", exit 2; gỡ biến → rollout ok, pod cũ 5cc68d5d56 Running suốt quá trình; make lint/test exit 0."
+    },
+    {
+      "id": "T18",
+      "sprint": "S3",
+      "name": "`ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint",
+      "dependencies": [
+        "T7",
+        "T15",
+        "T16",
+        "T17"
+      ],
+      "status": "done",
+      "evidence": "RED (2e6d2b7): scripts/test-ci-workflow.sh → \"No rule to make target 'actionlint'\" → \"FAIL: make actionlint\"; phần hợp đồng trên ci.yml cũ → negative control ok, triggers ok, \"FAIL: .github/workflows/ci.yml lacks job images\". GREEN: scripts/test-ci-workflow.sh → 6 ok (actionlint sạch; actionlint từ chối workflow `needs` job không tồn tại; pull_request + workflow_call, không pull_request_target, contents: read; 4 job; matrix 6 image = deploy/deployables.tsv, không push; job chạy đúng target), \"ci-workflow: all checks passed\". Chạy local các bước job: make actionlint exit 0; make helm-lint helm-test exit 0; scripts/vendor-manifests.sh --check exit 0; scripts/check-no-plain-secrets.sh ok; make alerts-test dashboards-test alertmanager-test runbooks-test obs-gen-check collector-validate exit 0. Đối chứng âm: đặt `push: true` trong job images → \"FAIL: images job must not push\" (exit 1), khôi phục → pass. make lint/test exit 0. Chưa chạy trên GitHub Actions (chưa có repo; T19 owner tạo repo public). Lệch plan: thêm scripts/test-ci-workflow.sh (test hợp đồng + đối chứng âm, theo /write-tests sau retro S2)."
+    },
+    {
+      "id": "T19",
+      "sprint": "S3",
+      "name": "`main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`",
+      "dependencies": [
+        "T18"
+      ],
+      "status": "blocked",
+      "evidence": "RED (04e3635): make scripts-test → \"scripts/release-bump.sh: No such file or directory\"; test-main-workflow → \"main.yml missing\"; dry run với main.yml của plan → check 1–4 ok, check 5 \"ci.yml must not trigger on push\". LOCAL GREEN: make scripts-test → \"ok   release-bump\"; scripts/test-main-workflow.sh → 5 ok, all checks passed; scripts/test-ci-workflow.sh all checks passed; make actionlint exit 0 (sau khi thêm .github/actionlint.yaml bỏ qua đúng 2 thông báo sai của actionlint 1.7.12 về create-github-app-token@v3 — action.yml v3 thật có `client-id`, `app-id` deprecated); đối chứng âm: `cliend-id` (gõ sai) vẫn bị actionlint bắt; thêm trigger pull_request vào main.yml → \"FAIL: … may only trigger on push/workflow_dispatch (D-38)\"; make lint/test exit 0. CHƯA: Step 7 chạy thật (gh run watch main.yml xanh, commit bot chore(release): kind <sha7>, cosign verify + verify-attestation 6 image).",
+      "note": "Chờ owner (Owner trước, plan T19): tạo repo GitHub public, `git remote add origin`, push; GitHub App bg-release-bot + var BG_RELEASE_BOT_CLIENT_ID + secret BG_RELEASE_BOT_PRIVATE_KEY; ruleset main (PR + ci, bypass bot); Workflow permissions = Read; sau push đầu đặt 6 package GHCR public; `gh auth login` trên máy để AI theo dõi run. Code + test local đã xong."
+    },
+    {
+      "id": "T20",
+      "sprint": "S3",
+      "name": "`rollback.yml` (env=kind, revert_sha)",
+      "dependencies": [
+        "T19"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "T21",
+      "sprint": "S3",
+      "name": "Argo CD app-of-apps `deploy/argocd/kind/` + bootstrap GitOps + nghiệm thu tiêu chí 1–6",
+      "dependencies": [
+        "T19",
+        "T20",
+        "T12",
+        "T16"
+      ],
+      "status": "not-started",
+      "evidence": ""
+    }
+  ]
+}

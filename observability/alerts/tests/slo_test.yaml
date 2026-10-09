@@ -1,0 +1,82 @@
+rule_files:
+  - ../slo.yaml
+evaluation_interval: 1m
+tests:
+  - name: 10% 5xx on public-api burns the budget fast
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{service_name="public-api",http_response_status_code="200"}'
+        values: '0+90x120'
+      - series: 'http_server_request_duration_seconds_count{service_name="public-api",http_response_status_code="500"}'
+        values: '0+10x120'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: ErrorBudgetBurnFast
+        exp_alerts:
+          - exp_labels: {severity: critical, runbook_url: observability/runbooks/error-budget-burn.md, service: public-api, service_name: public-api}
+            exp_annotations: {summary: "public-api is burning its 30-day error budget fast (SLO 99.9%)."}
+  - name: 4xx do not count against availability (2 errors / 100 non-4xx = 2% > 1.44%)
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{service_name="admin-api",http_response_status_code="200"}'
+        values: '0+98x120'
+      - series: 'http_server_request_duration_seconds_count{service_name="admin-api",http_response_status_code="404"}'
+        values: '0+100x120'
+      - series: 'http_server_request_duration_seconds_count{service_name="admin-api",http_response_status_code="503"}'
+        values: '0+2x120'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: ErrorBudgetBurnFast
+        exp_alerts:
+          - exp_labels: {severity: critical, runbook_url: observability/runbooks/error-budget-burn.md, service: admin-api, service_name: admin-api}
+            exp_annotations: {summary: "admin-api is burning its 30-day error budget fast (SLO 99.9%)."}
+  - name: core gRPC Unavailable counts as a server error
+    interval: 1m
+    input_series:
+      - series: 'rpc_server_duration_milliseconds_count{service_name="core",rpc_grpc_status_code="0"}'
+        values: '0+90x120'
+      - series: 'rpc_server_duration_milliseconds_count{service_name="core",rpc_grpc_status_code="14"}'
+        values: '0+10x120'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: ErrorBudgetBurnFast
+        exp_alerts:
+          - exp_labels: {severity: critical, runbook_url: observability/runbooks/error-budget-burn.md, service: core, service_name: core}
+            exp_annotations: {summary: "core is burning its 30-day error budget fast (SLO 99.9%)."}
+  - name: 0.5% errors fire only the slow burn alert
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{service_name="public-api",http_response_status_code="200"}'
+        values: '0+995x240'
+      - series: 'http_server_request_duration_seconds_count{service_name="public-api",http_response_status_code="500"}'
+        values: '0+5x240'
+    alert_rule_test:
+      - eval_time: 3h
+        alertname: ErrorBudgetBurnSlow
+        exp_alerts:
+          - exp_labels: {severity: warning, runbook_url: observability/runbooks/error-budget-burn.md, service: public-api, service_name: public-api}
+            exp_annotations: {summary: "public-api is burning its 30-day error budget steadily (SLO 99.9%)."}
+      - eval_time: 3h
+        alertname: ErrorBudgetBurnFast
+        exp_alerts: []
+  - name: p95 of read routes above 100 ms breaches, write routes under 300 ms do not
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_bucket{service_name="public-api",route_class="read",le="0.1"}'
+        values: '0+0x30'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="public-api",route_class="read",le="0.3"}'
+        values: '0+10x30'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="public-api",route_class="read",le="+Inf"}'
+        values: '0+10x30'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="public-api",route_class="write",le="0.1"}'
+        values: '0+0x30'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="public-api",route_class="write",le="0.3"}'
+        values: '0+10x30'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="public-api",route_class="write",le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: LatencyP95Breach
+        exp_alerts:
+          - exp_labels: {severity: warning, runbook_url: observability/runbooks/latency-p95-breach.md, service: public-api, service_name: public-api, route_class: read}
+            exp_annotations: {summary: "public-api p95 latency of read routes is above its SLO."}

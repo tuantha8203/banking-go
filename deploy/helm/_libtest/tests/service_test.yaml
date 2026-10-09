@@ -1,0 +1,27 @@
+suite: lib service, serviceaccount, configmap
+templates:
+  - templates/all.yaml
+tests:
+  - it: renders ServiceAccount, Service and Deployment by default
+    asserts:
+      - hasDocuments: {count: 3}
+  - it: exposes app and admin ports by name
+    documentSelector: {path: kind, value: Service}
+    asserts:
+      - equal: {path: spec.type, value: ClusterIP}
+      - contains: {path: spec.ports, content: {name: app, port: 8081, targetPort: app}}
+      - contains: {path: spec.ports, content: {name: admin, port: 9181, targetPort: admin}}
+      - equal: {path: "spec.selector[\"app.kubernetes.io/name\"]", value: libtest}
+  - it: does not automount the ServiceAccount token
+    documentSelector: {path: kind, value: ServiceAccount}
+    asserts:
+      - equal: {path: automountServiceAccountToken, value: false}
+  - it: renders configFiles into a ConfigMap
+    set:
+      configFiles:
+        config.js:
+          mountPath: /usr/share/nginx/html/config.js
+          content: "window.__BG_CONFIG__ = { env: 'kind' }"
+    documentSelector: {path: kind, value: ConfigMap}
+    asserts:
+      - equal: {path: "data[\"config.js\"]", value: "window.__BG_CONFIG__ = { env: 'kind' }"}

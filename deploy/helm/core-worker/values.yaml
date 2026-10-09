@@ -1,0 +1,25 @@
+# core-worker: relay, consumers, jobs, webhook listener (AD-1); same image as core (D-23).
+global:
+  ghOwner: ""
+  imagePullSecrets: []
+  otelEndpoint: ""
+  gateway: {name: traefik-gateway, namespace: traefik, sectionName: websecure}
+image:
+  repository: "ghcr.io/{{ .Values.global.ghOwner }}/banking-go/core"
+  digest: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+command: ["/usr/local/bin/core-worker"]
+ports: {app: null, admin: 9191}
+replicas: 2
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {memory: 256Mi}
+env: {}
+envFromSecrets: []
+configFiles: {}
+secretsRevision: "0"
+route: {enabled: false, host: "", pathPrefix: /}
+migration: {enabled: false, dsnSecret: ""}
+mtls: {enabled: false}
+shutdownTimeoutSeconds: 30

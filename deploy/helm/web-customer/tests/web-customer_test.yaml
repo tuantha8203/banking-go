@@ -1,0 +1,31 @@
+suite: web-customer chart (env kind)
+templates:
+  - templates/all.yaml
+values:
+  - ../values-kind.yaml
+tests:
+  - it: mounts config.js pointing at api.kind.localhost
+    set:
+      image.tag: local
+      global.ghOwner: acme
+    documentSelector: {path: kind, value: ConfigMap}
+    asserts:
+      - matchRegex: {path: "data[\"config.js\"]", pattern: "apiBaseUrl: 'https://api.kind.localhost'"}
+  - it: serves app.kind.localhost on nginx port 8080 with /healthz probes and CSP origin
+    set:
+      image.tag: local
+      global.ghOwner: acme
+    documentSelector: {path: kind, value: Deployment}
+    asserts:
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.path", value: /healthz}
+      - notExists: {path: "spec.template.spec.containers[0].command"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BG_API_ORIGIN, value: "https://api.kind.localhost"}
+  - it: routes app.kind.localhost
+    set:
+      image.tag: local
+      global.ghOwner: acme
+    documentSelector: {path: kind, value: HTTPRoute}
+    asserts:
+      - equal: {path: spec.hostnames, value: [app.kind.localhost]}

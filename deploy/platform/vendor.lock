@@ -1,0 +1,5 @@
+# Upstream manifests vendored for Argo CD directory sources and `kubectl apply` (scripts/vendor-manifests.sh).
+# dest                                                                                           sha256                                                            url
+deploy/platform/gateway-api/standard-install.yaml                                               faede450fa178126aba41337737b97d351ebe87d93c910237ce1e072d1ca40d9  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/standard-install.yaml
+deploy/platform/rabbitmq-operators/cluster-operator/cluster-operator.yml                         e99f04f46ecbf796b63c0f0e295bbae3d2aee3742897944cd1810cfcc44856ce  https://github.com/rabbitmq/cluster-operator/releases/download/v2.23.0/cluster-operator.yml
+deploy/platform/rabbitmq-operators/topology-operator/messaging-topology-operator-with-certmanager.yaml 73a45a423b3abb9dddfa84248e60699f69a4dbcf3456830b9af62ef496e1e549  https://github.com/rabbitmq/messaging-topology-operator/releases/download/v1.20.3/messaging-topology-operator-with-certmanager.yaml

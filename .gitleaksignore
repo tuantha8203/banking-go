@@ -1,0 +1,4 @@
+# gitleaks findings reviewed and accepted (owner approved 2026-10-09). One fingerprint per line.
+# Local docker-compose RabbitMQ default credentials (same as deploy/compose/compose.yaml) in a curl example of the
+# vendored docker-patterns skill, commit 928af68; the line now reads them from env vars. Not a real secret.
+928af680649ae717f793acd2c44f2ac69de4dd95:.claude/skills/docker-patterns/SKILL.md:curl-auth-user:228

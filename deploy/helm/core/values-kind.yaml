@@ -1,0 +1,10 @@
+# env kind (ADR 0011): 1 replica, low requests.
+global:
+  otelEndpoint: http://otel-collector.observability.svc:4317
+replicas: 1
+resources:
+  requests: {cpu: 10m, memory: 32Mi}
+  limits: {memory: 128Mi}
+env:
+  BG_CORE_ENVIRONMENT: kind
+envFromSecrets: [core-env]

@@ -1,5 +1,14 @@
 {
-  "exclude": ["**/node_modules/**", "pkg/gen/**", "**/*.pb.go", "services/*/api/openapi/**", "**/dist/**", "pnpm-lock.yaml", "**/go.sum", "docs/foundation/_bmad/**"],
+  "exclude": [
+    "**/node_modules/**",
+    "pkg/gen/**",
+    "**/*.pb.go",
+    "services/*/api/openapi/**",
+    "**/dist/**",
+    "pnpm-lock.yaml",
+    "**/go.sum",
+    "docs/foundation/_bmad/**"
+  ],
   "rules": [
     {
       "path": "services/core/internal/**/*.go",
@@ -24,6 +33,21 @@
     {
       "path": "services/*/migrations/**",
       "rule": "Migration phải tương thích ngược với bản đang chạy (expand → deploy → contract); không sửa migration đã merge; journals/entries/audit_records chỉ INSERT/SELECT cho role app.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "{scripts,deploy}/**/*.sh",
+      "rule": "Bash: `set -euo pipefail`; quote biến; temp file qua mktemp + trap dọn; không in/ghi secret, token, DSN, mật khẩu ra stdout/log/file ngoài pipe; lệnh kubectl/helm làm thay đổi cluster phải gọi require_kind_context hoặc ghim --context kind-<cluster> (không bao giờ chạm cluster khác); pipeline có pipefail và cẩn thận `[[ ]] && cmd || fail`; check/smoke phải khẳng định tín hiệu thành công dương và poll có giới hạn với hệ eventual-consistent.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "deploy/**/*.{yaml,yml}",
+      "rule": "Không có Secret thường (chỉ *.sealed.yaml, scope strict); image theo digest hoặc tag pin, không `latest`; pod: runAsNonRoot, readOnlyRootFilesystem, drop ALL, seccomp RuntimeDefault, có resources; chart/values pin version; file trong deploy/releases/ chỉ bot ghi; file GENERATED không sửa tay (sửa nguồn rồi make obs-gen).",
+      "merge_system_rule": true
+    },
+    {
+      "path": "observability/**",
+      "rule": "Mỗi alert có nhãn severity, service, runbook_url trỏ tới file có thật trong observability/runbooks/ và annotation summary; recording rule theo quy ước tên sli:<metric>:<window>; có promtool unit test cho alert mới/sửa; dashboard uid bg-<file>, chỉ datasource uid prom/traces; Alertmanager config không chứa token thật (template + render + seal).",
       "merge_system_rule": true
     }
   ]

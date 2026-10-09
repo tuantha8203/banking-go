@@ -1,0 +1,17 @@
+# Build context = repo root; only what the Go/SPA Dockerfiles copy.
+**
+!go.work
+!go.work.sum
+!pkg/
+!services/
+!apps/
+!packages/
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!deploy/docker/
+**/node_modules
+**/dist
+**/coverage
+**/*_test.go

@@ -1,0 +1,25 @@
+# mock-ekyc: eKYC partner mock (AD-12); mocks image.
+global:
+  ghOwner: ""
+  imagePullSecrets: []
+  otelEndpoint: ""
+  gateway: {name: traefik-gateway, namespace: traefik, sectionName: websecure}
+image:
+  repository: "ghcr.io/{{ .Values.global.ghOwner }}/banking-go/mocks"
+  digest: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+command: ["/usr/local/bin/mock-ekyc"]
+ports: {app: 8102, admin: 9202}
+replicas: 1
+resources:
+  requests: {cpu: 10m, memory: 32Mi}
+  limits: {memory: 128Mi}
+env: {}
+envFromSecrets: []
+configFiles: {}
+secretsRevision: "0"
+route: {enabled: false, host: "", pathPrefix: /}
+migration: {enabled: false, dsnSecret: ""}
+mtls: {enabled: false}
+shutdownTimeoutSeconds: 30

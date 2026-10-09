@@ -1,0 +1,71 @@
+# kube-prometheus-stack 91.9.0 on kind (observability.md § Pipeline): Prometheus remote-write receiver for the Collector,
+# Grafana pinned 12.4.12 (AD-13), 1 replica; v1 alert rules come from observability/alerts (T14), not the chart defaults.
+# CRDs come from the prometheus-operator-crds addon (wave -30) so wave -20 charts can create ServiceMonitors.
+crds:
+  enabled: false
+defaultRules:
+  create: false
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeEtcd: {enabled: false}
+kubeProxy: {enabled: false}
+prometheus:
+  prometheusSpec:
+    replicas: 1
+    retention: 3d
+    enableRemoteWriteReceiver: true
+    externalLabels:
+      env: kind
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests: {cpu: 100m, memory: 512Mi}
+      limits: {memory: 1Gi}
+alertmanager:
+  alertmanagerSpec:
+    # Whole config from the Sealed Secret (contains the Telegram token); template: observability/alertmanager/kind.yaml
+    configSecret: alertmanager-kind-config
+    replicas: 1
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 128Mi}
+grafana:
+  image:
+    tag: 12.4.12
+  replicas: 1
+  defaultDashboardsEnabled: false
+  grafana.ini:
+    server:
+      root_url: https://grafana.kind.localhost
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: true
+      uid: prom
+  additionalDataSources:
+    - name: Jaeger
+      type: jaeger
+      uid: traces
+      access: proxy
+      url: http://jaeger.observability.svc:16686
+  resources:
+    requests: {cpu: 20m, memory: 128Mi}
+    limits: {memory: 384Mi}
+kube-state-metrics:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
+prometheus-node-exporter:
+  resources:
+    requests: {cpu: 10m, memory: 16Mi}
+    limits: {memory: 64Mi}
+prometheusOperator:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 192Mi}

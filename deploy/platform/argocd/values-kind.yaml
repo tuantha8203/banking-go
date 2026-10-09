@@ -1,0 +1,36 @@
+# Argo CD v3.5 on kind (chart argo-cd 10.9.6): single replicas, no Dex/notifications, TLS terminated at Traefik.
+global:
+  domain: argocd.kind.localhost
+configs:
+  params:
+    server.insecure: true
+  cm:
+    timeout.reconciliation: 60s
+dex:
+  enabled: false
+notifications:
+  enabled: false
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 768Mi}
+server:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 256Mi}
+repoServer:
+  resources:
+    requests: {cpu: 20m, memory: 128Mi}
+    limits: {memory: 512Mi}
+applicationSet:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
+redis:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}

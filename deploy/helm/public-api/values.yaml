@@ -1,0 +1,25 @@
+# public-api: customer REST edge (AD-1).
+global:
+  ghOwner: ""
+  imagePullSecrets: []
+  otelEndpoint: ""
+  gateway: {name: traefik-gateway, namespace: traefik, sectionName: websecure}
+image:
+  repository: "ghcr.io/{{ .Values.global.ghOwner }}/banking-go/public-api"
+  digest: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+command: ["/usr/local/bin/public-api"]
+ports: {app: 8081, admin: 9181}
+replicas: 2
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {memory: 256Mi}
+env: {}
+envFromSecrets: []
+configFiles: {}
+secretsRevision: "0"
+route: {enabled: true, host: "", pathPrefix: /}
+migration: {enabled: true, dsnSecret: public-api-migrator-dsn}
+mtls: {enabled: false}
+shutdownTimeoutSeconds: 30

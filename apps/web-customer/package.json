@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@banking-go/i18n": "workspace:*",
+    "@banking-go/runtime-config": "workspace:*",
     "@banking-go/theme": "workspace:*",
     "antd": "6.6.5",
     "i18next": "26.4.2",

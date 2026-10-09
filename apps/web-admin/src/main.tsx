@@ -1,3 +1,4 @@
+import { getRuntimeConfig } from '@banking-go/runtime-config'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -5,6 +6,8 @@ import { App } from './App'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('#root not found')
+
+document.documentElement.dataset.env = getRuntimeConfig().env
 
 createRoot(root).render(
   <StrictMode>

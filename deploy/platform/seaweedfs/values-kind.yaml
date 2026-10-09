@@ -1,0 +1,20 @@
+# SeaweedFS 4.48 (official chart 4.48.0) all-in-one on kind: S3 with auth from Secret seaweedfs-s3-config,
+# bucket banking-kind created by the chart's bucket hook Job (spec §8).
+master: {enabled: false}
+volume: {enabled: false}
+filer: {enabled: false}
+allInOne:
+  enabled: true
+  data:
+    type: persistentVolumeClaim
+    size: 5Gi
+  s3:
+    enabled: true
+    enableAuth: true
+    existingConfigSecret: seaweedfs-s3-config
+    createBuckets:
+      - name: banking-kind
+        anonymousRead: false
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}

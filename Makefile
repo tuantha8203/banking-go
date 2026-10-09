@@ -34,11 +34,37 @@ $(TOOL_STAMP): tools/go.mod tools/go.sum
 		github.com/sqlc-dev/sqlc/cmd/sqlc \
 		github.com/pressly/goose/v3/cmd/goose \
 		google.golang.org/protobuf/cmd/protoc-gen-go \
-		google.golang.org/grpc/cmd/protoc-gen-go-grpc
+		google.golang.org/grpc/cmd/protoc-gen-go-grpc \
+		sigs.k8s.io/kind \
+		github.com/yannh/kubeconform/cmd/kubeconform \
+		github.com/mikefarah/yq/v4
 	@touch $@
 
 .PHONY: tools
 tools: $(TOOL_STAMP) ## Build pinned Go tools into ./bin
+
+# k8s/devops CLIs (platform v1): Go tools above + checksum-verified downloads (tools/k8s-tools.lock).
+KIND        := $(BIN)/kind
+KUBECTL     := $(BIN)/kubectl
+HELM        := $(BIN)/helm
+KUBECONFORM := $(BIN)/kubeconform
+YQ          := $(BIN)/yq
+PROMTOOL    := $(BIN)/promtool
+AMTOOL      := $(BIN)/amtool
+KUBESEAL    := $(BIN)/kubeseal
+ACTIONLINT  := $(BIN)/actionlint
+SHELLCHECK  := $(BIN)/shellcheck
+COSIGN      := $(BIN)/cosign
+GH          := $(BIN)/gh
+export HELM_PLUGINS := $(BIN)/helm-plugins
+
+K8S_TOOLS_STAMP := $(BIN)/.k8s-tools-stamp
+$(K8S_TOOLS_STAMP): tools/k8s-tools.lock scripts/install-k8s-tools.sh
+	scripts/install-k8s-tools.sh $(BIN)
+	@touch $@
+
+.PHONY: tools-k8s
+tools-k8s: $(TOOL_STAMP) $(K8S_TOOLS_STAMP) ## Pinned kind/kubectl/helm(+unittest)/kubeconform/yq/promtool/amtool/kubeseal/actionlint/cosign/gh/shellcheck in ./bin
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: build build-go build-web
@@ -111,6 +137,135 @@ gen-check: gen ## Fail if generated code differs from the committed files (CI)
 	git diff --exit-code -- pkg/gen services/public-api/api/openapi services/admin-api/api/openapi
 	@test -z "$$(git status --porcelain -- pkg/gen services/public-api/api/openapi services/admin-api/api/openapi)" || \
 		{ echo "untracked generated files:"; git status --porcelain -- pkg/gen services/*/api/openapi; exit 1; }
+
+# ---------------------------------------------------------------------------------------------
+# Images (platform v1). Local tags banking-go/<image>:local; CI/main.yml pushes ghcr.io/<owner>/banking-go/<image>.
+GIT_SHA      := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+VERSION      ?= sha-$(shell git rev-parse --short=7 HEAD 2>/dev/null || echo dev)
+IMAGE_PREFIX ?= banking-go
+IMAGE_TAG    ?= local
+GO_IMAGES    := core public-api admin-api mocks
+SPA_IMAGES   := web-customer web-admin
+IMAGES       := $(GO_IMAGES) $(SPA_IMAGES)
+# Forward the host's proxy env to the build (BuildKit predefined args: not kept in image history; none set in CI).
+PROXY_BUILD_ARGS := $(foreach v,HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy,$(if $($(v)),--build-arg $(v)))
+
+.PHONY: images images-go images-spa image-smoke
+images: images-go images-spa ## Build the 6 images as $(IMAGE_PREFIX)/<image>:$(IMAGE_TAG) (needs Docker buildx)
+images-go:
+	@for i in $(GO_IMAGES); do \
+		echo "== image $$i"; \
+		docker buildx build --load -f deploy/docker/go.Dockerfile $(PROXY_BUILD_ARGS) \
+			--build-arg SERVICE=$$i --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(GIT_SHA) \
+			-t $(IMAGE_PREFIX)/$$i:$(IMAGE_TAG) . || exit 1; \
+	done
+images-spa:
+	@for i in $(SPA_IMAGES); do \
+		echo "== image $$i"; \
+		docker buildx build --load -f deploy/docker/spa.Dockerfile $(PROXY_BUILD_ARGS) \
+			--build-arg APP=$$i -t $(IMAGE_PREFIX)/$$i:$(IMAGE_TAG) . || exit 1; \
+	done
+image-smoke: ## Run every local image and probe it (make images first)
+	VERSION=$(VERSION) scripts/image-smoke.sh $(IMAGE_PREFIX) $(IMAGE_TAG)
+
+# ---------------------------------------------------------------------------------------------
+# Helm (platform v1): deploy/helm/_lib is the only place with Kubernetes templates.
+HELM_CHARTS := $(sort $(filter-out deploy/helm/_%,$(wildcard deploy/helm/*)))
+KUBECONFORM_FLAGS := -strict -summary -kubernetes-version 1.36.0 -schema-location default \
+	-schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
+.PHONY: helm-deps helm-lint helm-test
+helm-deps: tools-k8s
+	@for c in deploy/helm/_libtest $(HELM_CHARTS); do $(HELM) dependency build $$c >/dev/null || exit 1; done
+helm-lint: helm-deps ## helm lint --strict + kubeconform (k8s 1.36 + CRD catalog) of every chart with values-kind.yaml
+	@for c in $(HELM_CHARTS); do \
+		n=$$(basename $$c); echo "== $$n"; \
+		$(HELM) lint --strict $$c -f $$c/values-kind.yaml --set global.ghOwner=lint-owner --set image.tag=lint || exit 1; \
+		$(HELM) template $$n $$c -n banking -f $$c/values-kind.yaml --set global.ghOwner=lint-owner --set image.tag=lint \
+			| $(KUBECONFORM) $(KUBECONFORM_FLAGS) || exit 1; \
+	done
+helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with tests/
+	@for c in deploy/helm/_libtest $(HELM_CHARTS); do \
+		if [ -d $$c/tests ]; then echo "== $$c"; $(HELM) unittest $$c || exit 1; fi; \
+	done
+
+.PHONY: actionlint
+actionlint: tools-k8s ## Lint .github/workflows (actionlint + pinned shellcheck, same as CI)
+	$(ACTIONLINT) -shellcheck=$(SHELLCHECK)
+
+.PHONY: scripts-test
+scripts-test: tools-k8s ## Shell tests of the release/rollback helpers (scripts/*_test.sh)
+	@for t in scripts/*_test.sh; do echo "== $$t"; $$t; done
+
+# ---------------------------------------------------------------------------------------------
+# kind env (ADR 0011). Never points at another cluster: scripts check the kubectl context.
+KIND_CLUSTER := banking-go
+GH_OWNER ?=
+
+.PHONY: kind-up kind-down
+kind-up: tools-k8s ## Create/refresh the kind cluster (idempotent): k8s 1.36, restore Sealed Secrets key, Argo CD
+	deploy/kind/bootstrap.sh
+	deploy/kind/check-cluster.sh
+kind-down: tools-k8s ## Back up the Sealed Secrets key (if any), then delete the kind cluster (aborts if the backup fails)
+	clusters=$$($(KIND) get clusters 2>&1) || { echo "kind get clusters failed: $$clusters" >&2; exit 1; }; \
+	if grep -qx '$(KIND_CLUSTER)' <<<"$$clusters"; then deploy/kind/sealed-key.sh backup; fi
+	$(KIND) delete cluster --name $(KIND_CLUSTER)
+
+.PHONY: kind-platform kind-ca
+kind-platform: tools-k8s ## Install kind add-ons from deploy/argocd/kind/values.yaml with helm/kubectl (before GitOps; MAX_WAVE=N to stop early)
+	scripts/kind-platform.sh $(if $(MAX_WAVE),--max-wave $(MAX_WAVE))
+	deploy/kind/check-platform.sh
+kind-ca: tools-k8s ## Export the kind root CA to ~/.config/banking-go/kind-ca.crt (curl --cacert / trust store)
+	@mkdir -p $(HOME)/.config/banking-go
+	$(KUBECTL) --context kind-$(KIND_CLUSTER) -n cert-manager get secret kind-root-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > $(HOME)/.config/banking-go/kind-ca.crt
+	@echo "CA: $(HOME)/.config/banking-go/kind-ca.crt — e.g. curl --cacert $(HOME)/.config/banking-go/kind-ca.crt https://api.kind.localhost/v1/ping"
+
+.PHONY: seal
+seal: tools-k8s ## Seal kind secrets from deploy/secrets/kind.env (git-ignored) into deploy/secrets/kind/*.sealed.yaml
+	scripts/seal-kind.sh
+
+.PHONY: kind-load kind-apps
+kind-load: tools-k8s ## Load the locally built images ($(IMAGE_PREFIX)/<image>:$(IMAGE_TAG)) into the kind nodes
+	@for i in $(IMAGES); do $(KIND) load docker-image $(IMAGE_PREFIX)/$$i:$(IMAGE_TAG) --name $(KIND_CLUSTER) || exit 1; done
+kind-apps: tools-k8s ## helm upgrade --install the 10 charts with values-kind.yaml + local images (before GitOps)
+	IMAGE_PREFIX=$(IMAGE_PREFIX) IMAGE_TAG=$(IMAGE_TAG) scripts/kind-apps.sh
+	deploy/kind/check-apps.sh
+
+.PHONY: kind-watch
+kind-watch: tools-k8s ## Post-deploy watch on kind (WATCH_MINUTES, default 10); prints a rollback proposal on breach
+	scripts/kind-watch.sh
+
+.PHONY: collector-validate
+collector-validate: tools-k8s ## Validate deploy/collector/kind.yaml with the pinned otelcol-contrib image (needs Docker)
+	scripts/collector-validate.sh
+
+.PHONY: kind-smoke kind-test
+kind-test: tools-k8s ## Regression tests for the kind scripts (key backup, kind-ca, kind-down, check-platform); needs the kind cluster
+	deploy/kind/test-sealed-key.sh
+kind-smoke: tools-k8s ## Smoke the kind env: 4 hosts via Traefik, migration Jobs, running digests vs deploy/releases/kind.yaml
+	scripts/kind-smoke.sh
+
+# ---------------------------------------------------------------------------------------------
+# Observability as code (platform v1): observability/ → deploy/platform/observability/kind (generated).
+.PHONY: alerts-test obs-gen obs-gen-check
+alerts-test: tools-k8s ## promtool check + unit tests of observability/alerts, kubeconform of the generated PrometheusRules
+	$(PROMTOOL) check rules observability/alerts/*.yaml
+	$(PROMTOOL) test rules observability/alerts/tests/*.yaml
+	$(KUBECONFORM) $(KUBECONFORM_FLAGS) deploy/platform/observability/kind/rules
+obs-gen: ## Regenerate PrometheusRule / dashboard ConfigMaps from observability/
+	scripts/gen-observability.sh
+obs-gen-check: obs-gen ## Fail if generated observability objects differ from the committed files (CI)
+	git diff --exit-code -- deploy/platform/observability
+	@test -z "$$(git status --porcelain -- deploy/platform/observability)" || { git status --porcelain -- deploy/platform/observability; exit 1; }
+.PHONY: dashboards-test
+dashboards-test: ## Validate observability/dashboards/*.json (uids, datasources, required panels)
+	scripts/test-dashboards.sh
+.PHONY: alertmanager-test
+alertmanager-test: tools-k8s ## amtool check + routing test of observability/alertmanager/kind.yaml
+	scripts/test-alertmanager.sh
+.PHONY: runbooks-test
+runbooks-test: tools-k8s ## Every runbook_url label points to a runbook with the required sections
+	scripts/test-runbooks.sh
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: up up-obs down run
