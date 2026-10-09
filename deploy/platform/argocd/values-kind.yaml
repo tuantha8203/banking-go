@@ -4,6 +4,8 @@ global:
 configs:
   params:
     server.insecure: true
+    # diff via server-side apply dry-run: API-server defaults (Gateway, HTTPRoute, CNPG Cluster) are not reported as OutOfSync
+    controller.diff.server.side: "true"
   cm:
     timeout.reconciliation: 60s
     resource.customizations.health.argoproj.io_Application: |
