@@ -2912,7 +2912,7 @@ Expected: lần 1 `creating cluster banking-go` … `ok   kind cluster banking-g
 
 Run: `make kind-down && make kind-up`
 Expected: kind-down in `[sealed-key] no controller key in kube-system yet` (chưa cài controller ở T8, được bỏ qua nhờ `-`), xóa cluster; kind-up dựng lại, exit 0.
-> Đã thay sau review S1 (9a5ad59 + T22): `kind-down` không còn `-`; backup chỉ khi `kind get clusters` liệt kê cluster, lỗi listing/backup → dừng trước `delete`; `sealed-key.sh` luôn dùng `--context kind-banking-go`; chưa có key → `[sealed-key] no controller key in kube-system yet: nothing to back up`, exit 0 (post hook T9 dùng `backup --require-key`).
+> Đã thay sau review S1 (40644b6 + T22): `kind-down` không còn `-`; backup chỉ khi `kind get clusters` liệt kê cluster, lỗi listing/backup → dừng trước `delete`; `sealed-key.sh` luôn dùng `--context kind-banking-go`; chưa có key → `[sealed-key] no controller key in kube-system yet: nothing to back up`, exit 0 (post hook T9 dùng `backup --require-key`).
 
 - [ ] **Step 8: Commit**
 
@@ -5779,7 +5779,7 @@ Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026
 - Modify: `docs/features/platform/v1/tasks.json` (ghi chú T8), `docs/features/platform/v1/plan.md` (T8 Step kind-down)
 
 **Interfaces:**
-- Consumes: `sealed-key.sh restore|backup`, `kind-down`, `kind-ca` (T8, sửa ở review S1 9a5ad59); `scripts/image-smoke.sh` (T3/T4).
+- Consumes: `sealed-key.sh restore|backup`, `kind-down`, `kind-ca` (T8, sửa ở review S1 40644b6); `scripts/image-smoke.sh` (T3/T4).
 - Produces: `sealed-key.sh backup --require-key` (chưa có key → exit 1); target `make kind-test` (chạy `deploy/kind/test-sealed-key.sh`).
 
 - [x] **Step 1: Test thất bại** — mở rộng `deploy/kind/test-sealed-key.sh` + `scripts/image-smoke.sh`:
@@ -5795,7 +5795,7 @@ Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026
   - R2 `sealed-key.sh backup --require-key`: chưa có key → exit 1; post hook sealed-secrets trong `deploy/argocd/kind/values.yaml`
     dùng `--require-key`; `check-platform.sh` kiểm backup khớp `tls.crt` của key đang chạy (không chỉ file tồn tại).
   - R3 test truyền `KIND_CLUSTER` trên dòng lệnh make; `make kind-test` (`## Regression tests for kind scripts (needs the kind cluster)`).
-  - R4 thêm ghi chú vào evidence T8 (tasks.json) và Step `kind-down` của T8 (plan.md): hành vi `-` nuốt lỗi đã thay ở review S1 (9a5ad59).
+  - R4 thêm ghi chú vào evidence T8 (tasks.json) và Step `kind-down` của T8 (plan.md): hành vi `-` nuốt lỗi đã thay ở review S1 (40644b6).
   - F5 `cd pkg && GOWORK=off go mod tidy` (hoặc trong workspace nếu tidy cần) → `go mod tidy -diff` rỗng.
   - F6 `spa.Dockerfile` build stage: `rm -f apps/${APP}/dist/config.js` (file dev chỉ dùng cho `vite dev`); nginx trả 404 khi không mount.
 - [x] **Step 3: Kiểm chứng** — `make kind-test`, `make images image-smoke`, `make kind-platform` (post hook) + `deploy/kind/check-platform.sh`,

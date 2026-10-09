@@ -1,12 +1,12 @@
 # PROGRESS
 
 ## Current State
-- Cập nhật: 2026-10-06 · Commit: 06d520a · Test: pass (`./init.sh` → Baseline OK)
+- Cập nhật: 2026-10-06 · Commit: c445406 · Test: pass (`./init.sh` → Baseline OK)
 - Feature đang làm: platform v1 · Sprint: S1 (0/12) · Task kế: T1 (chi tiết: scripts/sprint.sh status)
 
 ## Đã xong
-- Foundation v1 (docs/foundation/, spine AD-1..AD-26, ADR 0001–0010) — commit 15e846d
-- Scaffold monorepo (Go workspace, 2 SPA, compose local, Makefile, CI) — commit 9e8646d
+- Foundation v1 (docs/foundation/, spine AD-1..AD-26, ADR 0001–0010) — commit d70d4e5
+- Scaffold monorepo (Go workspace, 2 SPA, compose local, Makefile, CI) — commit 41d7a69
 - Foundation v2 (env kind, ADR 0011), v3 (cosign v3, URL chart Sealed Secrets)
 - Setup AI workflow: CLAUDE.md, .claude/settings.json (permissions, hooks, plugins), 11 lệnh vỏ, reviewer agent,
   Superpowers (writing-plans, TDD, verification) + 18 mục ECC (vendor-lock.json), .opencodereview/rule.json,

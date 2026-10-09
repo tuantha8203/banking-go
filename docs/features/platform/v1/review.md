@@ -32,9 +32,9 @@ Rubric (1–5): spec 4 · correctness 3 · security 4 · test evidence 4 · main
 
 ## Vòng 2 — 2026-10-06
 
-Bước a: `ocr delegate preview -c 9a5ad59` (3 file reviewable) — không có lỗi mới ở mức High/Medium.
+Bước a: `ocr delegate preview -c 40644b6` (3 file reviewable) — không có lỗi mới ở mức High/Medium.
 Bước b: subagent reviewer mới, tập trung vào fix F1 và các lỗi vòng 1. Đã chạy `deploy/kind/test-sealed-key.sh` (exit 0;
-sha256 `~/.config/banking-go/*` không đổi, cluster vẫn còn); chạy test trên bản `9a5ad59^` → exit 1 ở bước 1 (RED thật).
+sha256 `~/.config/banking-go/*` không đổi, cluster vẫn còn); chạy test trên bản `40644b6^` → exit 1 ở bước 1 (RED thật).
 Bước 3 RED đã chạy ở vòng 1 (Makefile cũ → `delete cluster --name banking-go` dù backup lỗi).
 
 | id | Mức | File | Lỗi | Lớp | Trạng thái |
@@ -94,4 +94,4 @@ Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · main
   (test đổi sang `notContains`). Bảng nghiệm thu T21 dòng 5 dùng thông điệp mới của smoke §7 (sau sửa T16).
 - gitleaks toàn lịch sử trước khi public: 1 finding (ví dụ `curl -u` với mật khẩu compose local trong skill docker-patterns),
   owner chấp nhận → `.gitleaksignore` theo fingerprint, ví dụ đổi sang env var; quét lại sạch (61 commit).
-- /improve sau retro S2: 4a, 3a, 5a đã áp dụng (73077b3); 7a chờ owner chạy `/foundation update observability`.
+- /improve sau retro S2: 4a, 3a, 5a đã áp dụng (01cd1f6); 7a chờ owner chạy `/foundation update observability`.
