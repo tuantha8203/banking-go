@@ -55,3 +55,35 @@ Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · main
 - F2 → bỏ qua; ghi vào Gotchas trong `CLAUDE.md`.
 - F3 → đã sửa plan T21: `core-worker` sync-wave `1` (sau `core` Healthy) + helm-unittest tương ứng.
 - F4 → backlog v2 (owner duyệt 2026-10-06): `topologySpreadConstraints` mềm (hostname + zone, `ScheduleAnyway`) trong library chart + helm-unittest, làm cùng values staging/prod.
+
+## Retro sprint S2 — 2026-10-09
+
+**Plan so với thực tế**
+- Phát sinh: T22 (sửa Minor sau review S1, owner duyệt, làm trước T13). Không task nào dropped.
+- Blocked: T16 bị chặn 3 ngày (06→09/10) chờ owner: lần 1 thiếu `TELEGRAM_*` trong `deploy/secrets/kind.env`, lần 2 thiếu `=` ở dòng 17.
+- AI phải làm lại: T16 báo "done" trên pass giả (smoke §7 đọc `alertmanager_notifications_failed_total`, chỉ tăng khi hết retry;
+  thực tế 100% request tới Telegram timeout vì pod kind không qua proxy công ty) → owner phát hiện, mở lại, sửa test + proxy.
+  T14: biểu thức `TelemetryPipelineDegraded` trong plan mất nhãn `job` (unit test bắt được). T13/T14: hai check thiếu chờ
+  (counter export lần đầu, Prometheus reload rule) → thêm poll/traffic, assertion giữ nguyên.
+- Môi trường: stack observability đẩy máy 15.4 GiB vào swap đầy (load ~98, kube-apiserver restart); T14/T15 chỉ cài addon thay
+  đổi thay vì full `kind-platform`. AI không được đọc `deploy/secrets/` nên không tự kiểm được `kind.env(.example)`.
+
+**Bài học**
+1. Check "đã gửi được" phải đo tín hiệu thành công dương (`*_requests_total - *_requests_failed_total > 0`, hoặc API phía nhận),
+   không suy ra từ "chưa có lỗi"; và mỗi smoke/check mới phải có một lần chạy đối chứng âm với đúng failure mode thật
+   (vd. chặn egress) — RED "file chưa tồn tại" không chứng minh check bắt được lỗi.
+2. Pod trong kind không có proxy công ty: mọi tích hợp ra internet (Telegram, webhook, sau này GHCR/GitHub từ trong cluster)
+   cần cấu hình proxy rõ ràng; nghi proxy đầu tiên khi gặp `dial tcp … timeout`.
+3. Check trên hệ eventual-consistent (export metric 60 s, operator reload rule 30–60 s) phải poll có giới hạn và tự tạo traffic
+   trong lúc chờ; viết sẵn như vậy trong plan thay vì sửa khi đỏ.
+4. Bước owner (secret, bot, chat id) nên được kiểm trước khi bắt đầu task bằng một validator chỉ in tên key/định dạng, không in
+   giá trị — vừa bắt lỗi cú pháp `.env` sớm, vừa để AI tự kiểm mà không cần đọc `deploy/secrets/`.
+5. RAM là ràng buộc thật của kind + observability trên máy dev: ghi yêu cầu, đóng app khác trước khi chạy full chain, hoặc giảm
+   resources/retention cho kind.
+
+**Đề xuất cho /improve (công cụ/flow — cần owner duyệt)**
+- Skill `/write-tests`: với smoke/check tích hợp, yêu cầu thêm một lần chạy đối chứng âm theo failure mode thật, ghi vào evidence.
+- `CLAUDE.md` Gotchas: pod kind không có proxy (dùng `TELEGRAM_PROXY_URL`/proxy_url); RAM thực tế khi có observability.
+- Script `scripts/check-kind-env.sh` (key bắt buộc + định dạng `KEY=value`, chỉ in tên key) chạy đầu `make seal` — là code sản
+  phẩm nên đưa vào sprint sau/v2 nếu owner đồng ý.
+- Rủi ro S3: xác nhận kind node pull được `ghcr.io` qua proxy (containerd của node) trước T19/T21.
