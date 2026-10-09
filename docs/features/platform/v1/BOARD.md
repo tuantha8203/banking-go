@@ -1,20 +1,18 @@
-# Board — platform v1 — sprint S2
+# Board — platform v1 — sprint S3
 
-Tiến độ: **6/6 done** · 0 doing · 0 blocked · 0 dropped
+Tiến độ: **0/4 done** · 0 doing · 0 blocked · 0 dropped
 
 ## Doing
 
 ## Todo
+- [ ] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
+- [ ] T19: `main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`
+- [ ] T20: `rollback.yml` (env=kind, revert_sha)
+- [ ] T21: Argo CD app-of-apps `deploy/argocd/kind/` + bootstrap GitOps + nghiệm thu tiêu chí 1–6
 
 ## Blocked
 
 ## Done
-- [x] T22: Sửa lỗi nhỏ sau review S1 (R1, R2, R3, R4, F5, F6 — `review.md`)
-- [x] T13: kube-prometheus-stack + Jaeger v2 + OTel Collector (`deploy/collector/kind.yaml`) + route vận hành + smoke telemetry
-- [x] T14: Alert rule v1 + recording rule SLI + promtool unit test + `PrometheusRule` sinh ra
-- [x] T15: Dashboard `service-overview` + `platform` + scrape CNPG/RabbitMQ/Argo CD + test
-- [x] T16: Alertmanager → Telegram (critical + Watchdog) từ Sealed Secret + `amtool` test
-- [x] T17: Runbook + `make kind-watch`
 
 ## Dropped
 

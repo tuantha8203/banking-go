@@ -10,12 +10,12 @@
     {
       "id": "S2",
       "goal": "Observability as code trên kind: trace + RED + alert + dashboard + Telegram + runbook",
-      "status": "active"
+      "status": "done"
     },
     {
       "id": "S3",
       "goal": "GitOps + pipeline thật (repo GitHub): CI, main.yml ký + bump digest, rollback, app-of-apps, nghiệm thu",
-      "status": "planned"
+      "status": "active"
     }
   ],
   "tasks": [
