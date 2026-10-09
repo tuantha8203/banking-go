@@ -78,6 +78,10 @@ seal banking admin-api-env \
   --from-literal=BG_ADMIN_API_AMQP_URL="$(amqp admin-api "$RMQ_ADMIN_API_PASSWORD")"
 # monitoring: Alertmanager config with the Telegram receiver (T16); skipped until the owner fills TELEGRAM_*.
 if [[ -n ${TELEGRAM_BOT_TOKEN:-} && -n ${TELEGRAM_CHAT_ID:-} ]]; then
+  # Telegram egress: TELEGRAM_PROXY_URL from kind.env, else the host's HTTPS proxy (kind pods have no proxy env);
+  # set TELEGRAM_PROXY_URL= (empty) in kind.env to connect directly.
+  export TELEGRAM_PROXY_URL=${TELEGRAM_PROXY_URL-${HTTPS_PROXY:-${https_proxy:-}}}
+  echo "alertmanager telegram proxy: ${TELEGRAM_PROXY_URL:-none}"
   seal monitoring alertmanager-kind-config --from-file=alertmanager.yaml=<("$ROOT/scripts/render-alertmanager.sh")
 else
   echo "skip monitoring/alertmanager-kind-config: set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in $ENV_FILE"
