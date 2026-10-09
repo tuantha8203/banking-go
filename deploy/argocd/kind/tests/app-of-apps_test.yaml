@@ -3,7 +3,7 @@ templates:
   - templates/addons.yaml
   - templates/apps.yaml
 set:
-  repoURL: git@github.com:acme/banking-go.git
+  repoURL: https://github.com/acme/banking-go.git
   ghOwner: acme
 tests:
   - it: renders one Application per deployable, releases file as the last values file
@@ -16,7 +16,7 @@ tests:
       - equal: {path: spec.sources[0].helm.valueFiles, value: [values-kind.yaml, $values/deploy/releases/kind.yaml]}
       - contains: {path: spec.sources[0].helm.parameters, content: {name: global.ghOwner, value: acme}}
       - notContains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
-      - equal: {path: spec.sources[1], value: {repoURL: "git@github.com:acme/banking-go.git", targetRevision: main, ref: values}}
+      - equal: {path: spec.sources[1], value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, ref: values}}
       - equal: {path: spec.syncPolicy.automated, value: {prune: true, selfHeal: true}}
   - it: core-worker syncs after core (wave 1) so it never runs ahead of core's PreSync migration (review S1 F3)
     template: templates/apps.yaml
@@ -45,7 +45,7 @@ tests:
     asserts:
       - equal:
           path: spec.source
-          value: {repoURL: "git@github.com:acme/banking-go.git", targetRevision: main, path: deploy/platform/gateway-api, directory: {recurse: true}}
+          value: {repoURL: "https://github.com/acme/banking-go.git", targetRevision: main, path: deploy/platform/gateway-api, directory: {recurse: true}}
       - contains: {path: spec.syncPolicy.syncOptions, content: ServerSideApply=true}
   - it: Argo CD manages itself before the other add-ons
     template: templates/addons.yaml

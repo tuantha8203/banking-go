@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Contract test for .github/workflows/main.yml (platform v1 T19; spec §4, deployment.md § Pipeline, D-19, D-22, D-38):
+# Contract test for .github/workflows/main.yml (platform v1 T19; spec §4, deployment.md § Pipeline, D-19, D-22, D-45):
 # release runs only from main, CI first, Trivy gate, push + keyless sign/attest by digest, and only bg-release-bot
 # writes deploy/releases/kind.yaml. Also: ci.yml no longer triggers on push (main.yml calls it) and runs scripts-test.
 set -euo pipefail
@@ -13,7 +13,7 @@ CI=.github/workflows/ci.yml
 
 # 1. triggers, permissions, concurrency
 [[ $(yq '[.on | keys | .[] | select(. != "push" and . != "workflow_dispatch")] | length' "$M") == 0 ]] \
-  || fail "$M may only trigger on push/workflow_dispatch (D-38): $(yq -o=json -I=0 '.on | keys' "$M")"
+  || fail "$M may only trigger on push/workflow_dispatch (D-45): $(yq -o=json -I=0 '.on | keys' "$M")"
 [[ $(yq -o=json -I=0 '.on.push.branches' "$M") == '["main"]' ]] || fail "$M must run on push to main only"
 [[ $(yq '.on.push["paths-ignore"] | contains(["deploy/releases/**"])' "$M") == true ]] || fail "bot bumps must not retrigger (paths-ignore deploy/releases/**)"
 [[ $(yq '.permissions.contents' "$M") == read && $(yq '.permissions | length' "$M") == 1 ]] || fail "top-level permissions must be contents: read only"

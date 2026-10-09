@@ -185,8 +185,8 @@ helm-lint: helm-deps ## helm lint --strict + kubeconform (k8s 1.36 + CRD catalog
 			| $(KUBECONFORM) $(KUBECONFORM_FLAGS) || exit 1; \
 	done
 	@echo "== deploy/argocd/kind (app-of-apps)"
-	$(HELM) lint --strict deploy/argocd/kind --set repoURL=git@github.com:lint-owner/banking-go.git --set ghOwner=lint-owner
-	$(HELM) template bg-kind-root deploy/argocd/kind -n argocd --set repoURL=git@github.com:lint-owner/banking-go.git --set ghOwner=lint-owner \
+	$(HELM) lint --strict deploy/argocd/kind --set repoURL=https://github.com/lint-owner/banking-go.git --set ghOwner=lint-owner
+	$(HELM) template bg-kind-root deploy/argocd/kind -n argocd --set repoURL=https://github.com/lint-owner/banking-go.git --set ghOwner=lint-owner \
 		| $(KUBECONFORM) $(KUBECONFORM_FLAGS)
 helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with tests/
 	@for c in deploy/helm/_libtest deploy/argocd/kind $(HELM_CHARTS); do \
