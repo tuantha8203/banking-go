@@ -2,8 +2,6 @@ name: ci
 
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_call:
 
 permissions:
@@ -145,6 +143,8 @@ jobs:
         run: scripts/vendor-manifests.sh --check
       - name: No plaintext Secret under deploy/ (spec criterion 6)
         run: scripts/check-no-plain-secrets.sh
+      - name: Release/rollback helper tests
+        run: make scripts-test
 
   observability:
     name: observability (promtool, dashboards, alertmanager, runbooks, generated objects, collector)

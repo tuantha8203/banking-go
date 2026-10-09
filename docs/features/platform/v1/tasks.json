@@ -218,8 +218,9 @@
       "dependencies": [
         "T18"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "blocked",
+      "evidence": "RED (969f1c1): make scripts-test → \"scripts/release-bump.sh: No such file or directory\"; test-main-workflow → \"main.yml missing\"; dry run với main.yml của plan → check 1–4 ok, check 5 \"ci.yml must not trigger on push\". LOCAL GREEN: make scripts-test → \"ok   release-bump\"; scripts/test-main-workflow.sh → 5 ok, all checks passed; scripts/test-ci-workflow.sh all checks passed; make actionlint exit 0 (sau khi thêm .github/actionlint.yaml bỏ qua đúng 2 thông báo sai của actionlint 1.7.12 về create-github-app-token@v3 — action.yml v3 thật có `client-id`, `app-id` deprecated); đối chứng âm: `cliend-id` (gõ sai) vẫn bị actionlint bắt; thêm trigger pull_request vào main.yml → \"FAIL: … may only trigger on push/workflow_dispatch (D-38)\"; make lint/test exit 0. CHƯA: Step 7 chạy thật (gh run watch main.yml xanh, commit bot chore(release): kind <sha7>, cosign verify + verify-attestation 6 image).",
+      "note": "Chờ owner (Owner trước, plan T19): tạo repo GitHub public, `git remote add origin`, push; GitHub App bg-release-bot + var BG_RELEASE_BOT_CLIENT_ID + secret BG_RELEASE_BOT_PRIVATE_KEY; ruleset main (PR + ci, bypass bot); Workflow permissions = Read; sau push đầu đặt 6 package GHCR public; `gh auth login` trên máy để AI theo dõi run. Code + test local đã xong."
     },
     {
       "id": "T20",

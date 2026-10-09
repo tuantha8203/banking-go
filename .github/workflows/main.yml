@@ -1,0 +1,142 @@
+name: main
+
+# Every commit on main: CI → build 6 images → Trivy → push GHCR → SBOM attest + keyless sign by digest →
+# bg-release-bot writes the digests to deploy/releases/kind.yaml (spec §4, deployment.md § Pipeline).
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'deploy/releases/**'   # bot bumps and rollbacks must not rebuild (would loop)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-kind
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  build:
+    name: build ${{ matrix.image }}
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write   # cosign keyless (OIDC GitHub → Fulcio)
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - {image: core, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=core}
+          - {image: public-api, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=public-api}
+          - {image: admin-api, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=admin-api}
+          - {image: mocks, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=mocks}
+          - {image: web-customer, dockerfile: deploy/docker/spa.Dockerfile, build-arg: APP=web-customer}
+          - {image: web-admin, dockerfile: deploy/docker/spa.Dockerfile, build-arg: APP=web-admin}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Image name (GHCR needs a lowercase owner)
+        run: |
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/banking-go/${{ matrix.image }}" >> "$GITHUB_ENV"
+          echo "TAG=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (load locally for scanning)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          build-args: |
+            ${{ matrix.build-arg }}
+            VERSION=${{ env.TAG }}
+            COMMIT=${{ github.sha }}
+          load: true
+          push: false
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - name: Trivy (fail on CRITICAL with a fix, NFR-S5)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.75.0 \
+            image --exit-code 1 --severity CRITICAL --ignore-unfixed --no-progress "$IMAGE:$TAG"
+      - name: Push and resolve digest
+        id: push
+        run: |
+          docker push "$IMAGE:$TAG"
+          digest=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}' | jq -r .digest)
+          [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "bad digest: $digest"; exit 1; }
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          mkdir -p digest && echo "$digest" > "digest/${{ matrix.image }}"
+      - name: SBOM (syft, SPDX JSON)
+        uses: anchore/sbom-action@v0.24.3
+        with:
+          image: ${{ env.IMAGE }}@${{ steps.push.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          syft-version: v1.54.0
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - name: Sign + attest SBOM by digest (keyless, D-19)
+        env:
+          REF: ${{ env.IMAGE }}@${{ steps.push.outputs.digest }}
+        run: |
+          cosign sign --yes "$REF"
+          cosign attest --yes --type spdxjson --predicate sbom.spdx.json "$REF"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.image }}
+          path: digest/
+          retention-days: 7
+
+  bump:
+    name: bump deploy/releases/kind.yaml (bg-release-bot)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BG_RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.BG_RELEASE_BOT_PRIVATE_KEY }}
+          permission-contents: write
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ steps.app.outputs.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+      - name: Write, commit and push the digests
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+          OWNER: ${{ github.repository_owner }}
+          SHA: ${{ github.sha }}
+        run: |
+          uid=$(gh api "/users/${SLUG}[bot]" --jq .id)
+          git config user.name "${SLUG}[bot]"
+          git config user.email "${uid}+${SLUG}[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main && git reset --hard origin/main
+            scripts/release-bump.sh kind "$SHA" "${OWNER,,}" digests deploy/releases/kind.yaml
+            git add deploy/releases/kind.yaml
+            if git diff --cached --quiet; then echo "no digest change"; exit 0; fi
+            git commit -m "chore(release): kind ${SHA::7}"
+            if git push origin HEAD:main; then exit 0; fi
+            echo "push rejected (attempt $attempt), retrying"; sleep 5
+          done
+          exit 1
