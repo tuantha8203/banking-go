@@ -99,3 +99,72 @@ jobs:
           docker run --rm -v "$PWD:/repo" -w /repo \
             -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
             zricethezav/gitleaks:v8.30.0 git /repo --redact --verbose --exit-code 1
+
+  images:
+    name: image ${{ matrix.image }} (build, no push)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {image: core, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=core}
+          - {image: public-api, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=public-api}
+          - {image: admin-api, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=admin-api}
+          - {image: mocks, dockerfile: deploy/docker/go.Dockerfile, build-arg: SERVICE=mocks}
+          - {image: web-customer, dockerfile: deploy/docker/spa.Dockerfile, build-arg: APP=web-customer}
+          - {image: web-admin, dockerfile: deploy/docker/spa.Dockerfile, build-arg: APP=web-admin}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build (no push)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          build-args: |
+            ${{ matrix.build-arg }}
+            VERSION=sha-${{ github.sha }}
+            COMMIT=${{ github.sha }}
+          push: false
+          tags: banking-go/${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy:
+    name: deploy (helm lint + kubeconform 1.36 + helm-unittest, manifests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: tools/go.sum
+      - run: make tools-k8s
+      - run: make helm-lint helm-test
+      - name: Vendored manifests match deploy/platform/vendor.lock
+        run: scripts/vendor-manifests.sh --check
+      - name: No plaintext Secret under deploy/ (spec criterion 6)
+        run: scripts/check-no-plain-secrets.sh
+
+  observability:
+    name: observability (promtool, dashboards, alertmanager, runbooks, generated objects, collector)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: tools/go.sum
+      - run: make tools-k8s
+      - run: make alerts-test dashboards-test alertmanager-test runbooks-test obs-gen-check collector-validate
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: tools/go.sum
+      - run: make actionlint

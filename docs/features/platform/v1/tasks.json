@@ -208,8 +208,8 @@
         "T16",
         "T17"
       ],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "RED (0d56907): scripts/test-ci-workflow.sh → \"No rule to make target 'actionlint'\" → \"FAIL: make actionlint\"; phần hợp đồng trên ci.yml cũ → negative control ok, triggers ok, \"FAIL: .github/workflows/ci.yml lacks job images\". GREEN: scripts/test-ci-workflow.sh → 6 ok (actionlint sạch; actionlint từ chối workflow `needs` job không tồn tại; pull_request + workflow_call, không pull_request_target, contents: read; 4 job; matrix 6 image = deploy/deployables.tsv, không push; job chạy đúng target), \"ci-workflow: all checks passed\". Chạy local các bước job: make actionlint exit 0; make helm-lint helm-test exit 0; scripts/vendor-manifests.sh --check exit 0; scripts/check-no-plain-secrets.sh ok; make alerts-test dashboards-test alertmanager-test runbooks-test obs-gen-check collector-validate exit 0. Đối chứng âm: đặt `push: true` trong job images → \"FAIL: images job must not push\" (exit 1), khôi phục → pass. make lint/test exit 0. Chưa chạy trên GitHub Actions (chưa có repo; T19 owner tạo repo public). Lệch plan: thêm scripts/test-ci-workflow.sh (test hợp đồng + đối chứng âm, theo /write-tests sau retro S2)."
     },
     {
       "id": "T19",

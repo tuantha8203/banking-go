@@ -188,6 +188,10 @@ helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with test
 		if [ -d $$c/tests ]; then echo "== $$c"; $(HELM) unittest $$c || exit 1; fi; \
 	done
 
+.PHONY: actionlint
+actionlint: tools-k8s ## Lint .github/workflows (actionlint; uses shellcheck when installed)
+	$(ACTIONLINT)
+
 # ---------------------------------------------------------------------------------------------
 # kind env (ADR 0011). Never points at another cluster: scripts check the kubectl context.
 KIND_CLUSTER := banking-go

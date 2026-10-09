@@ -88,7 +88,7 @@ Sprint S2 — "Observability as code trên kind"
 - [x] T17: Runbook + `make kind-watch`
 
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
-- [ ] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
+- [x] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
 - [ ] T19: `main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`
 - [ ] T20: `rollback.yml` (env=kind, revert_sha)
 - [ ] T21: Argo CD app-of-apps `deploy/argocd/kind/` + bootstrap GitOps + nghiệm thu tiêu chí 1–6
@@ -5819,10 +5819,10 @@ Nguồn: `docs/features/platform/v1/review.md` (vòng 1–2), owner duyệt 2026
 - Consumes: Dockerfile + build-arg (T3, T4); `make tools-k8s helm-lint helm-test alerts-test dashboards-test alertmanager-test runbooks-test obs-gen-check collector-validate`, `scripts/vendor-manifests.sh --check`, `scripts/check-no-plain-secrets.sh` (T1–T17).
 - Produces: `ci.yml` (vẫn `pull_request` + `workflow_call`) với job id `images` (matrix `image`, `dockerfile`, `build-arg`), `deploy`, `observability`, `actionlint`; target `make actionlint`. `main.yml` (T19) gọi lại `ci.yml`.
 
-- [ ] **Step 1: Test thất bại** — Run: `make actionlint`
+- [x] **Step 1: Test thất bại** — Run: `make actionlint`
 Expected: `make: *** No rule to make target 'actionlint'`.
 
-- [ ] **Step 2: `Makefile`** — thêm vào khối Helm (trước kind):
+- [x] **Step 2: `Makefile`** — thêm vào khối Helm (trước kind):
 
 ```make
 .PHONY: actionlint
@@ -5830,7 +5830,7 @@ actionlint: tools-k8s ## Lint .github/workflows (actionlint; uses shellcheck whe
 	$(ACTIONLINT)
 ```
 
-- [ ] **Step 3: `.github/workflows/ci.yml`** — thêm sau job `secrets`:
+- [x] **Step 3: `.github/workflows/ci.yml`** — thêm sau job `secrets`:
 
 ```yaml
   images:
@@ -5903,12 +5903,12 @@ actionlint: tools-k8s ## Lint .github/workflows (actionlint; uses shellcheck whe
       - run: make actionlint
 ```
 
-- [ ] **Step 4: Chạy local các bước của job**
+- [x] **Step 4: Chạy local các bước của job**
 
 Run: `make actionlint && make helm-lint helm-test && scripts/vendor-manifests.sh --check && scripts/check-no-plain-secrets.sh && make alerts-test dashboards-test alertmanager-test runbooks-test obs-gen-check collector-validate`
 Expected: actionlint không in lỗi (exit 0); mọi target khác exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/ci.yml Makefile
