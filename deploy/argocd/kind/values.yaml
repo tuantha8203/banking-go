@@ -33,11 +33,6 @@ addons:
     chart: {repo: https://bitnami.github.io/sealed-secrets, name: sealed-secrets, version: 2.20.0}
     values: [deploy/platform/sealed-secrets/values-kind.yaml]
     post: deploy/kind/sealed-key.sh backup --require-key
-  - name: traefik
-    wave: -20
-    namespace: traefik
-    chart: {repo: https://traefik.github.io/charts, name: traefik, version: 41.6.1}
-    values: [deploy/platform/traefik/values-kind.yaml]
   - name: cloudnative-pg
     wave: -20
     namespace: cnpg-system
@@ -57,6 +52,13 @@ addons:
   - name: kind-secrets
     wave: -18
     path: deploy/secrets/kind
+  # after cluster-issuers: the Gateway's websecure listener needs Secret wildcard-kind-localhost-tls; without it the
+  # listener is invalid, the Application stays Degraded and the waves never reach the issuer
+  - name: traefik
+    wave: -17
+    namespace: traefik
+    chart: {repo: https://traefik.github.io/charts, name: traefik, version: 41.6.1}
+    values: [deploy/platform/traefik/values-kind.yaml]
   - name: postgres
     wave: -15
     path: deploy/platform/data/kind/postgres
