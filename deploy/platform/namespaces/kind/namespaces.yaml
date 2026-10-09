@@ -21,3 +21,10 @@ kind: Namespace
 metadata:
   name: monitoring
   labels: {app.kubernetes.io/part-of: banking-go}
+---
+# before cluster-issuers (wave -18) issues the Gateway certificate into it; the traefik add-on comes after (wave -17)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik
+  labels: {app.kubernetes.io/part-of: banking-go}
