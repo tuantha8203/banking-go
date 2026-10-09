@@ -217,3 +217,4 @@ token storage/CSRF/scanner, K8s 1.37, CNPG 1.31, SM-3 trên prod, partition sổ
 | [0010](../adr/0010-object-store-va-ma-hoa-pii.md) | Object store ảnh eKYC + mã hóa PII |
 | [0011](../adr/0011-moi-truong-kind-cho-gitops-local.md) | Môi trường `kind` cho GitOps/Helm/observability trên máy dev |
 | [0012](../adr/0012-repo-va-ghcr-public.md) | Repo GitHub và package GHCR public (gói Free: ruleset, Required reviewer; bỏ pull secret) |
+| [0013](../adr/0013-alert-nen-tang-tuong-minh.md) | Alert nền tảng khai báo tường minh (có runbook + promtool test) thay `defaultRules` của kube-prometheus-stack |
