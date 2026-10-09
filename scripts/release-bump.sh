@@ -10,6 +10,7 @@ env=$1 sha=$2 owner=$3 dir=$4 out=$5
 [[ $env =~ ^[a-z]+$ ]] || die "bad env $env"
 [[ $sha =~ ^[0-9a-f]{40}$ ]] || die "git sha must be 40 lowercase hex chars"
 [[ $owner =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] || die "owner must be a lowercase GitHub login (GHCR)"
+mkdir -p "$(dirname "$out")"   # first release: deploy/releases/ does not exist yet
 tmp=$(mktemp "$(dirname "$out")/.release-bump.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
 {
