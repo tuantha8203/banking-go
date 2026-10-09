@@ -89,7 +89,7 @@ Sprint S2 — "Observability as code trên kind"
 
 Sprint S3 — "GitOps + pipeline thật (cần repo GitHub; owner làm các bước tay trước)"
 - [x] T18: `ci.yml`: build 6 image (không push), deploy lint/test, observability test, actionlint
-- [ ] T19: `main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`
+- [x] T19: `main.yml`: build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`
 - [ ] T20: `rollback.yml` (env=kind, revert_sha)
 - [ ] T21: Argo CD app-of-apps `deploy/argocd/kind/` + bootstrap GitOps + nghiệm thu tiêu chí 1–6
 
@@ -5935,7 +5935,7 @@ git commit -m "ci(platform): build images, lint/test charts and observability as
 - Consumes: `ci.yml` (`workflow_call`, T18), Dockerfile (T3, T4), `deploy/deployables.tsv` (T3), `bin/yq`.
 - Produces: `scripts/release-bump.sh <env> <git_sha> <gh_owner> <digests_dir> <out_file>` — ghi `{release: sha-<7>, gitSha, <deployable>: {image: ghcr.io/<owner>/banking-go/<image>, digest}}`; artifact `digest-<image>` (file `<image>` chứa `sha256:…`); image `ghcr.io/<owner>/banking-go/<image>:sha-<7>` ký keyless + attestation `spdxjson`; commit bot `chore(release): kind <sha7>`; `concurrency: release-kind`; target `make scripts-test`.
 
-- [ ] **Step 1: Viết test thất bại** — `scripts/release-bump_test.sh`
+- [x] **Step 1: Viết test thất bại** — `scripts/release-bump_test.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -5977,7 +5977,7 @@ scripts-test: tools-k8s ## Shell tests of the release/rollback helpers (scripts/
 Run: `chmod +x scripts/release-bump_test.sh && make scripts-test`
 Expected: FAIL — `scripts/release-bump.sh: No such file or directory`.
 
-- [ ] **Step 2: `scripts/release-bump.sh`**
+- [x] **Step 2: `scripts/release-bump.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -6015,7 +6015,7 @@ trap - EXIT
 Run: `chmod +x scripts/release-bump.sh && make scripts-test`
 Expected: `ok   release-bump`.
 
-- [ ] **Step 3: `.github/workflows/main.yml`**
+- [x] **Step 3: `.github/workflows/main.yml`**
 
 ```yaml
 name: main
@@ -6162,26 +6162,26 @@ jobs:
           exit 1
 ```
 
-- [ ] **Step 4: `ci.yml`** — xóa 2 dòng `push:` / `branches: [main]` trong khối `on:` (main.yml gọi ci.yml qua `workflow_call`, tránh chạy 2 lần), và thêm vào cuối job `deploy`:
+- [x] **Step 4: `ci.yml`** — xóa 2 dòng `push:` / `branches: [main]` trong khối `on:` (main.yml gọi ci.yml qua `workflow_call`, tránh chạy 2 lần), và thêm vào cuối job `deploy`:
 
 ```yaml
       - name: Release/rollback helper tests
         run: make scripts-test
 ```
 
-- [ ] **Step 5: Lint workflow**
+- [x] **Step 5: Lint workflow**
 
 Run: `make actionlint && make scripts-test`
 Expected: exit 0, `ok   release-bump`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .github/workflows/main.yml .github/workflows/ci.yml scripts/release-bump.sh scripts/release-bump_test.sh Makefile
 git commit -m "ci(platform): main.yml builds, scans, signs and pushes images, bot bumps kind digests"
 ```
 
-- [ ] **Step 7: Chạy thật (sau khi owner push commit này)**
+- [x] **Step 7: Chạy thật (sau khi owner push commit này)**
 
 Run (owner): `bin/gh run watch "$(bin/gh run list --workflow main.yml -L1 --json databaseId -q '.[0].databaseId')" --exit-status`
 Expected: job `ci`, 6 job `build …`, `bump` xanh; `git pull && git log --oneline -1 -- deploy/releases/kind.yaml` → `chore(release): kind <sha7>` của `bg-release-bot[bot]`.
