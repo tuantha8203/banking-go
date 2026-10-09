@@ -6,7 +6,8 @@ nodeSelector:
 tolerations:
   - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
 service:
-  type: ClusterIP
+  spec:
+    type: ClusterIP   # chart 41.x: service.spec.* (service.type is ignored); kind has no LB, traffic uses hostPort
 ports:
   web:
     hostPort: 80

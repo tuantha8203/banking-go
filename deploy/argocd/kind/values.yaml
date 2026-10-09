@@ -43,16 +43,13 @@ addons:
     namespace: cnpg-system
     chart: {repo: https://cloudnative-pg.github.io/charts, name: cloudnative-pg, version: 0.29.1}
     values: [deploy/platform/cloudnative-pg/values-kind.yaml]
-  - name: rabbitmq-cluster-operator
+  # one add-on for both vendored operators: each upstream manifest declares Namespace rabbitmq-system, and two Applications
+  # owning it leave one OutOfSync (SharedResourceWarning); within one Application the repeat collapses to one resource.
+  - name: rabbitmq-operators
     wave: -19
     namespace: rabbitmq-system
-    path: deploy/platform/rabbitmq-operators/cluster-operator
-    wait: "-n rabbitmq-system --for=condition=Available deploy/rabbitmq-cluster-operator --timeout=300s"
-  - name: rabbitmq-topology-operator
-    wave: -19
-    namespace: rabbitmq-system
-    path: deploy/platform/rabbitmq-operators/topology-operator
-    wait: "-n rabbitmq-system --for=condition=Available deploy/messaging-topology-operator --timeout=300s"
+    path: deploy/platform/rabbitmq-operators
+    wait: "-n rabbitmq-system --for=condition=Available deploy/rabbitmq-cluster-operator deploy/messaging-topology-operator --timeout=300s"
   - name: cluster-issuers
     wave: -18
     path: deploy/platform/cert-manager-issuers/kind
