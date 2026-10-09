@@ -6,7 +6,8 @@
 #   2. no resource is declared by two add-ons (Argo CD SharedResourceWarning → one Application stays OutOfSync);
 #   3. Argo CD diffs server-side (API-server defaults on Gateway/HTTPRoute/CNPG Cluster otherwise show OutOfSync);
 #   4. a Gateway TLS listener's Secret is issued by an earlier wave (else the Gateway add-on stays Degraded: deadlock);
-#   5. a resource placed outside its add-on's namespace lands in a namespace created by an earlier wave.
+#   5. a resource placed outside its add-on's namespace lands in a namespace created by an earlier wave;
+#   6. the root app retries without limit (transient Degraded add-ons otherwise exhaust its retries for good).
 # Needs network for the chart repos (no cluster).
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -80,4 +81,10 @@ ok "namespaces exist before the resources that use them"
 [[ $(yq '.configs.params["controller.diff.server.side"]' deploy/platform/argocd/values-kind.yaml) == true ]] \
   || fail "Argo CD must diff server-side (configs.params controller.diff.server.side: true)"
 ok "Argo CD server-side diff on"
+
+# 6. the root app retries without limit: add-ons go briefly Degraded while starting, each one fails the root's wave sync,
+#    and once the retries are spent Argo CD never auto-syncs that revision again (stuck until the next commit)
+[[ $(yq '.spec.syncPolicy.retry.limit // 0 | . < 0' deploy/kind/root.yaml) == true ]] \
+  || fail "deploy/kind/root.yaml must retry without limit (spec.syncPolicy.retry.limit < 0)"
+ok "root app retries without limit"
 echo "kind-catalog: all checks passed"
