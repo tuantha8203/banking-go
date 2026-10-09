@@ -1,30 +1,30 @@
 # Written by bg-release-bot (.github/workflows/main.yml) for env kind. Do not edit; roll back with rollback.yml.
-release: sha-3494289
-gitSha: 3494289c6d06ed0955e4412090195900ace3d3f1
+release: sha-30352eb
+gitSha: 30352ebd8838966dccc2ba43af91f8d617eee52a
 core:
   image: ghcr.io/tuantha8203/banking-go/core
-  digest: sha256:6c45758323cb956dac4f8d5fb7e55ac4e3c2796e8d7b1ab27b210adf992eb55b
+  digest: sha256:c24fad6592189987bc495f48983112c933a3cd0b3b9ba8f22e2506a4b96815d1
 core-worker:
   image: ghcr.io/tuantha8203/banking-go/core
-  digest: sha256:6c45758323cb956dac4f8d5fb7e55ac4e3c2796e8d7b1ab27b210adf992eb55b
+  digest: sha256:c24fad6592189987bc495f48983112c933a3cd0b3b9ba8f22e2506a4b96815d1
 public-api:
   image: ghcr.io/tuantha8203/banking-go/public-api
-  digest: sha256:8b692ba963285433d81108a545e563dcc3cfca9057b3220ac360f168f8e7488a
+  digest: sha256:00eb8b160b68930a1c22f1ab5fa0f2ccc542ed29e04aa888815e8519314ef63b
 admin-api:
   image: ghcr.io/tuantha8203/banking-go/admin-api
-  digest: sha256:de1cd65d22bdff1273e5ac516ed4fac3215ea055b0bd1c9b082f729a36103544
+  digest: sha256:5ad229addc20bfe7c388b9d8a81ca72d07299b5cb6321ffa93dc1fc939b63c1c
 mock-napas:
   image: ghcr.io/tuantha8203/banking-go/mocks
-  digest: sha256:3a851ea2979067f64ada95825bbfc008fd8645728d53b0227699c13a0703b3ae
+  digest: sha256:275fd8040ba2251fb1a691079a5f95f4b3ddc6fc68809e7c966035daedf22bdc
 mock-ekyc:
   image: ghcr.io/tuantha8203/banking-go/mocks
-  digest: sha256:3a851ea2979067f64ada95825bbfc008fd8645728d53b0227699c13a0703b3ae
+  digest: sha256:275fd8040ba2251fb1a691079a5f95f4b3ddc6fc68809e7c966035daedf22bdc
 mock-otp:
   image: ghcr.io/tuantha8203/banking-go/mocks
-  digest: sha256:3a851ea2979067f64ada95825bbfc008fd8645728d53b0227699c13a0703b3ae
+  digest: sha256:275fd8040ba2251fb1a691079a5f95f4b3ddc6fc68809e7c966035daedf22bdc
 mock-gateway:
   image: ghcr.io/tuantha8203/banking-go/mocks
-  digest: sha256:3a851ea2979067f64ada95825bbfc008fd8645728d53b0227699c13a0703b3ae
+  digest: sha256:275fd8040ba2251fb1a691079a5f95f4b3ddc6fc68809e7c966035daedf22bdc
 web-customer:
   image: ghcr.io/tuantha8203/banking-go/web-customer
   digest: sha256:9981718108897cc3a5027800a7e5e36745a744ea0f5aa63e915c5790807f109f
