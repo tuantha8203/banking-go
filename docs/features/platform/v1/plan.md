@@ -5922,10 +5922,10 @@ git commit -m "ci(platform): build images, lint/test charts and observability as
 ### T19: `main.yml` — build → Trivy → push → SBOM + cosign → bot bump `deploy/releases/kind.yaml`
 
 **Owner trước:**
-1. Tạo repo GitHub **private** `<GH_OWNER>/banking-go`, `git remote add origin git@github.com:<GH_OWNER>/banking-go.git`, push `main` (owner chạy `git push`, AI không).
+1. Tạo repo GitHub **public** `<GH_OWNER>/banking-go` (foundation v4, ADR 0012; trước khi push lần đầu chạy gitleaks toàn lịch sử — đã sạch 2026-10-09), `git remote add origin git@github.com:<GH_OWNER>/banking-go.git`, push `main` (owner chạy `git push`, AI không).
 2. Tạo GitHub App `bg-release-bot` (Repository permissions: Contents **Read and write**, Metadata Read), cài vào repo; lưu repo variable `BG_RELEASE_BOT_CLIENT_ID` và repo secret `BG_RELEASE_BOT_PRIVATE_KEY` (Settings → Secrets and variables → Actions).
 3. Ruleset nhánh `main`: bắt buộc PR + check `ci` xanh; bypass list chỉ app `bg-release-bot` (D-22: bot chỉ push commit đổi `deploy/releases/*` — ràng buộc bằng `paths-ignore` + `scripts/release-bump.sh`, review ở PR).
-4. Settings → Actions → General: Workflow permissions = Read; sau lần push đầu, đặt 6 package GHCR `banking-go/*` là private và cấp quyền repo.
+4. Settings → Actions → General: Workflow permissions = Read; sau lần push đầu, đặt 6 package GHCR `banking-go/*` là **public** (Package settings → Change visibility) và liên kết repo (D-31).
 
 **Files:**
 - Create: `.github/workflows/main.yml`, `scripts/release-bump.sh`, `scripts/release-bump_test.sh`
@@ -6186,7 +6186,7 @@ git commit -m "ci(platform): main.yml builds, scans, signs and pushes images, bo
 Run (owner): `bin/gh run watch "$(bin/gh run list --workflow main.yml -L1 --json databaseId -q '.[0].databaseId')" --exit-status`
 Expected: job `ci`, 6 job `build …`, `bump` xanh; `git pull && git log --oneline -1 -- deploy/releases/kind.yaml` → `chore(release): kind <sha7>` của `bg-release-bot[bot]`.
 
-Run (owner, sau `docker login ghcr.io` bằng PAT `read:packages` vì package private):
+Run (owner; package public nên không cần `docker login`):
 ```bash
 OWNER=<gh_owner>
 ID="^https://github.com/$OWNER/banking-go/.github/workflows/main.yml@refs/heads/main\$"
@@ -6353,16 +6353,16 @@ git commit -m "ci(platform): rollback.yml reverts a kind digest bump through bg-
 **Owner trước:**
 1. T19 đã có ít nhất một lần `main.yml` xanh → `deploy/releases/kind.yaml` tồn tại trên `main`.
 2. Tạo deploy key **chỉ đọc**: `ssh-keygen -t ed25519 -N '' -C argocd-kind -f ~/.config/banking-go/argocd-deploy-key && chmod 600 ~/.config/banking-go/argocd-deploy-key`; thêm `argocd-deploy-key.pub` vào repo (Settings → Deploy keys, không tick write).
-3. Tạo PAT classic scope `read:packages` (GHCR chưa hỗ trợ fine-grained cho pull), ghi `GHCR_USER=<login>` và `GHCR_PAT=<token>` vào `deploy/secrets/kind.env`; chạy `make seal` rồi commit `deploy/secrets/kind/banking-ghcr-pull.sealed.yaml` qua PR (bước 5 của task).
+3. (Bỏ theo foundation v4 / ADR 0012: package GHCR public, không cần PAT `read:packages` hay Sealed `ghcr-pull`.)
 4. Telegram đã cấu hình (T16).
 
 **Files:**
 - Create: `deploy/argocd/kind/Chart.yaml`, `deploy/argocd/kind/templates/addons.yaml`, `deploy/argocd/kind/templates/apps.yaml`, `deploy/argocd/kind/tests/app-of-apps_test.yaml`, `deploy/kind/root.yaml`, `deploy/kind/wait-argocd.sh`
-- Modify: `deploy/argocd/kind/values.yaml` (addon `argocd` wave -25, danh sách `apps`), `deploy/kind/bootstrap.sh`, `deploy/platform/argocd/values-kind.yaml` (health của Application), `scripts/seal-kind.sh` (`ghcr-pull`), `deploy/secrets/kind.env.example`, `Makefile` (`kind-up` truyền `GH_OWNER`, `helm-lint`/`helm-test` gồm chart app-of-apps), `CLAUDE.md` (Gotchas)
+- Modify: `deploy/argocd/kind/values.yaml` (addon `argocd` wave -25, danh sách `apps`), `deploy/kind/bootstrap.sh`, `deploy/platform/argocd/values-kind.yaml` (health của Application), `Makefile` (`kind-up` truyền `GH_OWNER`, `helm-lint`/`helm-test` gồm chart app-of-apps), `CLAUDE.md` (Gotchas)
 
 **Interfaces:**
 - Consumes: catalog `addons[]` (T9–T14), chart `deploy/helm/<d>` (T7), `deploy/releases/kind.yaml` (T19), `sealed-key.sh` (T8), smoke/watch (T12–T17), rollback (T20).
-- Produces: Application `bg-kind-root` (ns `argocd`, path `deploy/argocd/kind`, Helm parameter `repoURL`, `ghOwner`), một Application cho mỗi addon (annotation `argocd.argoproj.io/sync-wave` = `wave`) và mỗi app (wave `0`; riêng `core-worker` wave `1` để chỉ rollout sau khi `core` Healthy — migration PreSync của core xong; core migrate fail thì core-worker giữ bản cũ (review S1 F3); multi-source: `deploy/helm/<d>` + `values-kind.yaml` + `$values/deploy/releases/kind.yaml`, parameter `global.ghOwner`, `global.imagePullSecrets[0]=ghcr-pull`); Secret repo `argocd/repo-banking-go` (từ deploy key, tạo bởi bootstrap); `deploy/kind/wait-argocd.sh` (env `WAIT_TIMEOUT`, mặc định 1800 s); `make kind-up GH_OWNER=<owner>` = GitOps đầy đủ; không có `GH_OWNER` → chỉ cluster + Argo CD (đường offline `kind-platform`/`kind-apps` giữ nguyên cho máy chưa có GitHub).
+- Produces: Application `bg-kind-root` (ns `argocd`, path `deploy/argocd/kind`, Helm parameter `repoURL`, `ghOwner`), một Application cho mỗi addon (annotation `argocd.argoproj.io/sync-wave` = `wave`) và mỗi app (wave `0`; riêng `core-worker` wave `1` để chỉ rollout sau khi `core` Healthy — migration PreSync của core xong; core migrate fail thì core-worker giữ bản cũ (review S1 F3); multi-source: `deploy/helm/<d>` + `values-kind.yaml` + `$values/deploy/releases/kind.yaml`, parameter `global.ghOwner`; không có `imagePullSecrets` — GHCR public); Secret repo `argocd/repo-banking-go` (từ deploy key, tạo bởi bootstrap); `deploy/kind/wait-argocd.sh` (env `WAIT_TIMEOUT`, mặc định 1800 s); `make kind-up GH_OWNER=<owner>` = GitOps đầy đủ; không có `GH_OWNER` → chỉ cluster + Argo CD (đường offline `kind-platform`/`kind-apps` giữ nguyên cho máy chưa có GitHub).
 
 - [ ] **Step 1: Viết test thất bại**
 
@@ -6385,7 +6385,7 @@ tests:
       - equal: {path: spec.sources[0].path, value: deploy/helm/public-api}
       - equal: {path: spec.sources[0].helm.valueFiles, value: [values-kind.yaml, $values/deploy/releases/kind.yaml]}
       - contains: {path: spec.sources[0].helm.parameters, content: {name: global.ghOwner, value: acme}}
-      - contains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
+      - notContains: {path: "spec.sources[0].helm.parameters", content: {name: "global.imagePullSecrets[0]", value: ghcr-pull}}
       - equal: {path: spec.sources[1], value: {repoURL: "git@github.com:acme/banking-go.git", targetRevision: main, ref: values}}
       - equal: {path: spec.syncPolicy.automated, value: {prune: true, selfHeal: true}}
   - it: core-worker syncs after core (wave 1) so it never runs ahead of core's PreSync migration (review S1 F3)
@@ -6541,8 +6541,6 @@ spec:
         parameters:
           - name: global.ghOwner
             value: {{ $owner }}
-          - name: global.imagePullSecrets[0]
-            value: ghcr-pull
     - repoURL: {{ $repo }}
       targetRevision: {{ $.Values.targetRevision }}
       ref: values
@@ -6709,37 +6707,18 @@ kind-up: tools-k8s ## Create/refresh kind (idempotent): k8s 1.36, Sealed Secrets
 	deploy/kind/check-cluster.sh
 ```
 
-- [ ] **Step 5: Pull secret GHCR** — `scripts/seal-kind.sh`, thêm trước dòng cuối `"$ROOT/scripts/check-no-plain-secrets.sh"`:
-
-```bash
-# banking: GHCR pull secret (T21, owner PAT read:packages); skipped until GHCR_USER/GHCR_PAT are set.
-if [[ -n ${GHCR_USER:-} && -n ${GHCR_PAT:-} ]]; then
-  kubectl create secret docker-registry ghcr-pull --namespace banking --docker-server=ghcr.io \
-    --docker-username="$GHCR_USER" --docker-password="$GHCR_PAT" --dry-run=client -o yaml \
-    | kubeseal --cert "$CERT" --format yaml > "$OUT/banking-ghcr-pull.sealed.yaml"
-  echo "sealed banking/ghcr-pull"
-else
-  echo "skip banking/ghcr-pull: set GHCR_USER and GHCR_PAT in $ENV_FILE"
-fi
-```
-`deploy/secrets/kind.env.example` — thêm:
-```dotenv
-# GHCR pull (T21, owner): GitHub login + classic PAT with read:packages only.
-GHCR_USER=
-GHCR_PAT=
-```
-`CLAUDE.md` — thêm vào `## Gotchas`:
+- [ ] **Step 5: Gotchas** (A1, foundation v4: GHCR public → không có pull secret `ghcr-pull`) — `CLAUDE.md` — thêm vào `## Gotchas`:
 ```markdown
 - kind GitOps: `make kind-up GH_OWNER=<owner>` cần deploy key chỉ đọc ở ~/.config/banking-go/argocd-deploy-key; `deploy/releases/kind.yaml` chỉ bot `bg-release-bot` ghi; rollback chỉ owner chạy `gh workflow run rollback.yml`.
 ```
 
-Run: `chmod +x deploy/kind/wait-argocd.sh && make seal && make helm-lint helm-test && make actionlint`
-Expected: `sealed banking/ghcr-pull`; lint/test exit 0.
+Run: `chmod +x deploy/kind/wait-argocd.sh && make helm-lint helm-test && make actionlint`
+Expected: lint/test exit 0.
 
 - [ ] **Step 6: Commit (owner mở PR, merge vào `main`)**
 
 ```bash
-git add deploy/argocd/kind deploy/kind deploy/platform/argocd/values-kind.yaml scripts/seal-kind.sh deploy/secrets Makefile CLAUDE.md
+git add deploy/argocd/kind deploy/kind deploy/platform/argocd/values-kind.yaml Makefile CLAUDE.md
 git commit -m "feat(platform): argo cd app-of-apps for kind with multi-source release digests"
 ```
 
@@ -6751,7 +6730,7 @@ git commit -m "feat(platform): argo cd app-of-apps for kind with multi-source re
 | 2 | Owner push 1 commit lên `main`; `bin/gh run watch "$(bin/gh run list --workflow main.yml -L1 --json databaseId -q '.[0].databaseId')" --exit-status`; lệnh `cosign verify` + `cosign verify-attestation --type spdxjson` ở T19 Step 7 cho 6 image; `git pull && git log --oneline -1 -- deploy/releases/kind.yaml` | run xanh; 6× `verify ok`, 6× `attestation ok`; commit `chore(release): kind <sha7>` của `bg-release-bot[bot]` |
 | 3 | `deploy/kind/wait-argocd.sh && make kind-smoke` | Job `*-migrate` `Completed`; 4 host 200 (`{"status":"ok"}` / HTML); 10 dòng `<deployable> runs sha256:…` khớp `deploy/releases/kind.yaml` |
 | 4 | `prev=$(git log -2 --format=%H -- deploy/releases/kind.yaml \| tail -1)`; owner: `bin/gh workflow run rollback.yml -f env=kind -f revert_sha=$(git log -1 --format=%H -- deploy/releases/kind.yaml)`; sau khi run xanh: `git pull && deploy/kind/wait-argocd.sh && make kind-smoke && git diff --quiet $prev HEAD -- deploy/releases/kind.yaml` | rollback run xanh; kind-smoke pass với digest = bản trước; `git diff` không khác |
-| 5 | `make kind-smoke` (mục 5–7) và `make runbooks-test` | trace `public-api` trong Jaeger `/api/v3/traces`; RED rate > 0; dashboard `bg-service-overview` có trong Grafana; `Alertmanager delivered N telegram notification(s), 0 failed`; 7 runbook `ok` |
+| 5 | `make kind-smoke` (mục 5–7) và `make runbooks-test` | trace `public-api` trong Jaeger `/api/v3/traces`; RED rate > 0; dashboard `bg-service-overview` có trong Grafana; `Alertmanager delivered N telegram request(s) successfully`; 7 runbook `ok` |
 | 6 | `make helm-lint helm-test && make alerts-test && make actionlint && scripts/check-no-plain-secrets.sh && docker run --rm -v "$PWD:/repo" -w /repo -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' zricethezav/gitleaks:v8.30.0 git /repo --redact --exit-code 1` | tất cả exit 0; gitleaks `no leaks found`; `ok   no plaintext Secret under deploy/` |
 
 Ghi kết quả từng dòng (lệnh + output rút gọn) làm evidence của T21 trong `tasks.json`.

@@ -37,7 +37,7 @@ observability.md cho env `kind`.
    `banking.events`, `banking.commands`, retry 3 mức, DLQ, user/quyền theo service), SeaweedFS 1 node + Job tạo bucket
    `banking-kind`, kube-prometheus-stack (Grafana 12.4, 1 replica), Jaeger v2 in-memory, OTel Collector contrib
    (`deploy/collector/kind.yaml`).
-9. **Secrets**: `deploy/secrets/kind/*.sealed.yaml` (mật khẩu role DB, user RabbitMQ, key S3, pull secret GHCR, Telegram bot
+9. **Secrets**: `deploy/secrets/kind/*.sealed.yaml` (mật khẩu role DB, user RabbitMQ, key S3, Telegram bot
    token/chat id); bootstrap backup/khôi phục key controller ở `~/.config/banking-go/` (ngoài repo).
 10. **Observability as code**: alert v1 (`observability/alerts/`): `Watchdog`, SLO burn (`sli:error_ratio:<window>`), p95 breach,
     `TelemetryPipeline`, cert expiry, pod crashloop, Argo CD app degraded — kèm `promtool` unit test; dashboard
@@ -86,8 +86,8 @@ observability.md cho env `kind`.
 - **Log/metric/alert**: alert v1 ở trên; metric RED do otelhttp/otelgrpc phát; Collector redaction PII (O-7).
 - **Feature flag**: không.
 - **Rollback**: `rollback.yml env=kind`; hỏng cluster → `make kind-down && make kind-up` (khôi phục key Sealed Secrets).
-- **Việc owner tự làm**: tạo repo GitHub private + push `main`; GitHub App `bg-release-bot` (contents:write) + ruleset cho bot
-  bypass `deploy/releases/*`; deploy key chỉ đọc cho Argo CD; PAT `read:packages` cho pull GHCR; Telegram bot + chat id.
+- **Việc owner tự làm**: tạo repo GitHub **public** + push `main` (foundation v4, ADR 0012: gói Free; package GHCR public, không pull secret); GitHub App `bg-release-bot` (contents:write) + ruleset cho bot
+  bypass `deploy/releases/*`; deploy key chỉ đọc cho Argo CD; Telegram bot + chat id.
 
 ## Rủi ro
 - RAM máy dev (~6–7 GB cho kind) → request thấp, 1 replica; quá tải thì tắt Jaeger/Grafana bằng values.

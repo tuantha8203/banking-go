@@ -87,3 +87,11 @@ Rubric (1–5): spec 5 · correctness 4 · security 5 · test evidence 4 · main
 - Script `scripts/check-kind-env.sh` (key bắt buộc + định dạng `KEY=value`, chỉ in tên key) chạy đầu `make seal` — là code sản
   phẩm nên đưa vào sprint sau/v2 nếu owner đồng ý.
 - Rủi ro S3: xác nhận kind node pull được `ghcr.io` qua proxy (containerd của node) trước T19/T21.
+
+## Quyết định của owner — 2026-10-09 (trước S3)
+- GitHub gói Free → **A1**: repo public + package GHCR public (foundation v4, ADR 0012: D-31 sửa, thêm D-37/D-38). Spec/plan T19,
+  T21 bỏ PAT `read:packages`, `GHCR_USER/GHCR_PAT`, Sealed `ghcr-pull` và parameter `imagePullSecrets` của app-of-apps
+  (test đổi sang `notContains`). Bảng nghiệm thu T21 dòng 5 dùng thông điệp mới của smoke §7 (sau sửa T16).
+- gitleaks toàn lịch sử trước khi public: 1 finding (ví dụ `curl -u` với mật khẩu compose local trong skill docker-patterns),
+  owner chấp nhận → `.gitleaksignore` theo fingerprint, ví dụ đổi sang env var; quét lại sạch (61 commit).
+- /improve sau retro S2: 4a, 3a, 5a đã áp dụng (73077b3); 7a chờ owner chạy `/foundation update observability`.
