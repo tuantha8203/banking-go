@@ -218,3 +218,4 @@ token storage/CSRF/scanner, K8s 1.37, CNPG 1.31, SM-3 trên prod, partition sổ
 | [0011](../adr/0011-moi-truong-kind-cho-gitops-local.md) | Môi trường `kind` cho GitOps/Helm/observability trên máy dev |
 | [0012](../adr/0012-repo-va-ghcr-public.md) | Repo GitHub và package GHCR public (gói Free: ruleset, Required reviewer; bỏ pull secret) |
 | [0013](../adr/0013-alert-nen-tang-tuong-minh.md) | Alert nền tảng khai báo tường minh (có runbook + promtool test) thay `defaultRules` của kube-prometheus-stack |
+| [0014](../adr/0014-argocd-keo-git-qua-https.md) | Argo CD kéo Git qua HTTPS không credential (repo public); kind: repo-server qua proxy máy dev bằng ConfigMap từ bootstrap |
