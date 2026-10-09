@@ -27,6 +27,7 @@ while read -r name version sha url; do
     actionlint) tar -xzf "$file" -C "$TMP" actionlint && install -m 0755 "$TMP/actionlint" "$BIN/actionlint" ;;
     cosign)   install -m 0755 "$file" "$BIN/cosign" ;;
     gh)       tar -xzf "$file" -C "$TMP" "gh_${v}_linux_amd64/bin/gh" && install -m 0755 "$TMP/gh_${v}_linux_amd64/bin/gh" "$BIN/gh" ;;
+    shellcheck) tar -xzf "$file" -C "$TMP" "shellcheck-v$v/shellcheck" && install -m 0755 "$TMP/shellcheck-v$v/shellcheck" "$BIN/shellcheck" ;;
     *) echo "install-k8s-tools: unknown tool $name" >&2; exit 1 ;;
   esac
   echo "installed $name $version"

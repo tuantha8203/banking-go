@@ -36,7 +36,7 @@ jobs:
       - name: go vet
         run: make vet
       - name: go test
-        run: go test -race $(printf './%s/... ' pkg services/core services/public-api services/admin-api services/mocks)
+        run: go test -race ./pkg/... ./services/core/... ./services/public-api/... ./services/admin-api/... ./services/mocks/...
       - name: Generated code is committed (protobuf + OpenAPI, AD-9)
         run: make gen-check
 

@@ -21,4 +21,5 @@ expect '1\.7\.12'                             "$B/actionlint" -version
 expect 'unittest[[:space:]]+1\.2\.1'          env HELM_PLUGINS="$B/helm-plugins" "$B/helm" plugin list
 expect 'v3\.1\.3'                             "$B/cosign" version
 expect 'gh version 2\.102\.0'                 "$B/gh" --version
+expect 'version: 0\.11\.0'                   "$B/shellcheck" --version
 echo "all k8s tools pinned"

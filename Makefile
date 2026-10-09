@@ -53,6 +53,7 @@ PROMTOOL    := $(BIN)/promtool
 AMTOOL      := $(BIN)/amtool
 KUBESEAL    := $(BIN)/kubeseal
 ACTIONLINT  := $(BIN)/actionlint
+SHELLCHECK  := $(BIN)/shellcheck
 COSIGN      := $(BIN)/cosign
 GH          := $(BIN)/gh
 export HELM_PLUGINS := $(BIN)/helm-plugins
@@ -63,7 +64,7 @@ $(K8S_TOOLS_STAMP): tools/k8s-tools.lock scripts/install-k8s-tools.sh
 	@touch $@
 
 .PHONY: tools-k8s
-tools-k8s: $(TOOL_STAMP) $(K8S_TOOLS_STAMP) ## Pinned kind/kubectl/helm(+unittest)/kubeconform/yq/promtool/amtool/kubeseal/actionlint/cosign/gh in ./bin
+tools-k8s: $(TOOL_STAMP) $(K8S_TOOLS_STAMP) ## Pinned kind/kubectl/helm(+unittest)/kubeconform/yq/promtool/amtool/kubeseal/actionlint/cosign/gh/shellcheck in ./bin
 
 # ---------------------------------------------------------------------------------------------
 .PHONY: build build-go build-web
@@ -189,8 +190,8 @@ helm-test: helm-deps ## helm-unittest: lib fixture chart + every chart with test
 	done
 
 .PHONY: actionlint
-actionlint: tools-k8s ## Lint .github/workflows (actionlint; uses shellcheck when installed)
-	$(ACTIONLINT)
+actionlint: tools-k8s ## Lint .github/workflows (actionlint + pinned shellcheck, same as CI)
+	$(ACTIONLINT) -shellcheck=$(SHELLCHECK)
 
 .PHONY: scripts-test
 scripts-test: tools-k8s ## Shell tests of the release/rollback helpers (scripts/*_test.sh)
